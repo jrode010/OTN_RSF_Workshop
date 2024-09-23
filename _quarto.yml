@@ -11,6 +11,8 @@ website:
       href: Rinst.html
     - text: "RSF with RF"
       href: RF.html
+    - text: "RSF with GLMM"
+      href: GLMM.html
 
 format:
   html:

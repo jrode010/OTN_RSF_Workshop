@@ -298,7 +298,7 @@ head(RandomPts)
 
 alldat <- rbind(coadat1, RandomPts)
 head(alldat)
-
+saveRDS(alldat, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/alldat.RDS')
 #now we have our full dataset with presences and pseudo-absences!!! 
 #Now we can extract environmental variables to model habitat selection
 #Load in rasters - all rasters are interpolated maps from either surveys performed by Rodemann et al. or by FWRI as part of the Fisheries Habitat Assessment Program (FHAP) in Florida Bay
@@ -329,6 +329,7 @@ datcoor <- alldat %>%
   st_set_crs(2958) # using 2958 for projected
 
 datextract <- terra::extract(rastdat, datcoor) #extract data at each point
+
 datrf <- cbind(datextract, alldat) %>% drop_na() #combine dataframes and remove NAs (only happens if cell is not kept within cropped raster)
 head(datrf)
 #datrf is the dataset that we will use for all of our models. We have temporal components we can put into GLMM and GAMs as well as individual data for random effects
@@ -352,8 +353,6 @@ head(RSF_ar.test)
 #take out ID column
 RSF_ar.test <- RSF_ar.test %>% dplyr::select(-ID) %>% drop_na()
 RSF_ar.train <- RSF_ar.train %>% dplyr::select(-ID) %>% drop_na()
-
-
 
 #turn datasets into sf objects for spatial classification
 RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>% 
@@ -408,8 +407,6 @@ learner$train(task_trout.train)
 #let's quickly look at the model
 learner$model
 
-saveRDS(learner, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/spatial_learner.RDS')
-saveRDS(task_trout.train, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/spatial_task_train.RDS')
 #Accuracy of model - first on training data, then testing data
 measures <- msrs(c('classif.acc'))
 
@@ -448,6 +445,7 @@ effect_hw$plot()
 #we can see as halodule cover goes up, probability of presence goes up. What about thalassia?
 effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
 effect_tt$plot()
+
 
 #opposite effect. Makes sense. How about cover?
 effect_cov <- FeatureEffect$new(predictor_trout, feature = c('cov2020'), method = 'pdp')
