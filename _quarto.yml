@@ -9,6 +9,8 @@ website:
 
     - text: "R & Rstudio"
       href: Rinst.html
+    - text: "RSF with RF"
+      href: RF.html
 
 format:
   html:

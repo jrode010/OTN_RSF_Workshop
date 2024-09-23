@@ -1,0 +1,548 @@
+---
+title: "RSF with Random Forest Models"
+author: "Jonathan Rodemann, Lucas Griffin"
+date: "9/23/24"
+format: 
+  html:
+    toc: true
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = T, cache = T)
+```
+
+## RSFs with Random Forest Modelling
+This vignette uses Random Forest to calculate Resource Selection Functions. We will step you through the steps in order to set up the RSFs and then run an example from Spotted Seatrout in Florida Bay (Rodemann et al. 2024 in prep)
+
+[R script](Workshop_code_RSF_RF.R)
+
+## data
+The data used for this example was collected by Rodemann et al. in Florida Bay. Acoustic telemetry data is from tagged spotted seatrout and environmental data is from field surveys done by Rodemann and team. 
+  
+![Map of sampling basins](maps/Array_Rankin.png)
+
+```{r}
+# load libraries
+library(terra, exclude = 'resample') #work with spatial data - rasters
+library(raster) #work with spatial data - rasters
+library(sf) #Work with spatial data - shapefiles
+library(sfheaders) #work with spatial data
+library(chron) #visualization of acoustic data
+library(splitstackshape) #break up data into smaller columns
+library(scales)#visualization of acoustic data
+library(mlr3verse) # Machine learning
+library(mlr3spatial) #spatial machine learning
+library(randomForest) #Machine learning
+library(iml) #result interpretation
+library(ranger) #Machine learning
+library(tidyverse) #organize and visualize data
+library(ggmap) #plotting onto map
+library(beepr) #beeps when code is done running
+
+# load sav monitoring data 
+dt <- read.csv('data/Acoustic_data.csv') #Acoustic data
+tags <- read.csv('data/Tag_Metadata.csv') #tag metadata
+stations <- read.csv('data/Stations.csv')
+head(dt)
+```
+
+## Prepare data
+First we need to set up the acoustic data in order to work with it. This includes changing the time column into an actual time column and merging it with the metadata to add locations. Then we can plot the detection history to visualize when and where our fish were picked up
+
+```{r}
+dt <- dt %>% dplyr::select(-c(Transmitter.Name, Transmitter.Serial, Sensor.Value, Sensor.Unit, Latitude, Longitude, Transmitter.Type, Sensor.Precision))
+
+#change Date_time into posixct
+dt$Date_time <- as.POSIXct(dt$Date.and.Time..UTC., format='%Y-%m-%d %H:%M:%S', tz='UTC')
+
+#abacus plot of detections
+trout_det <- ggplot(dt, aes(Date_time, Transmitter, col = Receiver)) + 
+  geom_point() +
+  scale_x_datetime(labels = date_format("%Y-%m-%d"),
+                   date_breaks = "3 months", limits = as.POSIXct(c('2020-01-27 00:00:00', '2021-01-01 00:00:00')))+
+  labs(x = "Date",  y = "Transmitter") +
+  # Change the angle and text size of x-axis tick labels to make more readable in final plots
+  theme_bw()+
+  theme(axis.text.x=element_text(angle= 50, size=10, vjust = 1, hjust=1),panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  theme(axis.text.y=element_text(size=8))+
+  labs(title = "Trout Detections")
+trout_det
+
+dat <- merge(dt, stations, by="Station.Name")
+dat <- dat %>% select(-c(X, Receiver.x, Receiver.y, SAV))
+str(dat)
+```
+
+## Calculate COAs
+To reduce spatial and temporal autocorrelation as well as shift our detection points away from only the receivers, we calculate Centers-of-Activity (COAs). These are the average position of your organism across a certain time step. This time step depends on your organisms mobility and activity level as well as the positions of your receivers. Then we can visualize where in the world we are and our positions
+
+```{r}
+#Ok, we have the acoustic data merged with station data so we have locations. Let's calculate Center of Activities (COAs)
+#split up data into time chunks - want the right balance of time based on your tag timing to reduce autocorrelation but also create enough data
+ex <- seq(from = trunc(min(dat$Date_time, na.rm = TRUE), "day"), 
+          to = trunc(max(dat$Date_time, na.rm = TRUE), "day") + 
+            86400, by = 3600) #We split this data up into 1 hour time bins
+dat$DateTime <- cut(dat$Date_time, breaks = ex) #cut up the data to calculate COAs
+str(dat)
+
+#Calculation of COAs
+coadat <- dat %>% group_by(DateTime, Transmitter) %>% mutate(n = n()) %>% filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
+  group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
+  select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
+head(coadat)
+
+#So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs
+coadat1 <- coadat %>% as.data.frame() %>% group_by(Transmitter) %>%
+  mutate(count = n()) %>% filter(count >= 50) %>% select(-c(n, count)) %>% distinct()
+str(coadat1)
+```
+
+```{r}
+#First, let's plot this in ggmap to get our bearings LG
+# Note,a API key from Google Maps is required to load the map and run the below code. Visit https://rpubs.com/ktcross/1154003 for instructions on  how to install and run ggamps in R
+# For now, we will use the already saved maps but the code to generate the maps if you have an existing API code is below as well.
+
+# FLmap_zoom_out <- get_googlemap(center = c(lon=mean(coadat1$long.coa), lat=mean(coadat1$lat.coa)),
+#                        zoom = 6,
+#                        maptype = c("satellite"))
+load("data/FLmap_zoom_out.RData")
+
+ggmap(FLmap_zoom_out, extent='normal') + 
+  geom_point(data = coadat1,
+             aes(x = long.coa, y = lat.coa,), col ="yellow") 
+
+# FLmap_zoom_in <- get_googlemap(center = c(lon=mean(coadat1$long.coa), lat=mean(coadat1$lat.coa)),
+#                                 zoom = 13,
+#                                 maptype = c("satellite"))
+load("data/FLmap_zoom_in.RData")
+
+ggmap(FLmap_zoom_in, extent='normal') + 
+  geom_point(data = coadat1,
+             aes(x = long.coa, y = lat.coa,), col ="yellow") +
+  facet_wrap(~Transmitter)
+
+#now we have a dataframe with our transmitter, datetime bin, and coa lat and long. Let's look at the COAs on a map
+#create a spatial object in sf
+sfdat <- coadat1 %>% 
+  st_as_sf(coords = c('long.coa', 'lat.coa')) %>% #set up the coordinates
+  st_set_crs(4326) %>%  # using 4326 for lat/lon decimal
+  st_transform(2958) #Transform data into projected coordinate system
+
+#We can now graph this in ggplot to confirm
+ggplot() +
+  geom_sf(data = sfdat, size = 3)
+
+#this is now projected data, so revert it back!
+coor <- as.data.frame(do.call('rbind', sfdat$geometry)) %>% rename(x = V1, y = V2)
+
+coadat1 <- cbind(coadat1, coor) %>% select(-c(lat.coa, long.coa))
+
+#As you can see, the data is limited to our grid of receivers. This is a downside to acoustic telemetry vs positioning solvers
+```
+
+## Calculating pseudo-absence points
+Because acoustic telemetry data does not inherently have absence points (it only provides presence points), we need to calculate what are called "pseudo-absence" points. These are randomly placed points across your area of study for every presence point you have. How many pseudo-absence points depeneds on what models you are using. For Random Forest, a 1 to 1 ratio is best.
+
+For this, it is best to break up the points into temporal categories to increase the robustness of the model. We are doing diel period (night/day) and season.
+```{r}
+#So we have the the real detections. Now we need to create pseudo-absences to compare the presences to.
+#For Random Forest, we do a 1 to 1 ratio of presence and pseudo-absence points. Barbet-Massin et al., 2012 Meth Ecol Evol
+set.seed(19) #repeatability of randomness
+
+#we are going to break up the data by individual, diel period, and season. This is for GLMM and GAM calcs, not for RF
+#set up data for break-up
+head(coadat1)
+
+coadat1$DateTime2 <- coadat1$DateTime
+
+coadat1 <- cSplit(coadat1, "DateTime2", sep = " ", type.convert = F)
+
+
+# Rename columns so they make sense, it'll just be your last 2 column numbers, in this case the 15th and 16th column s
+colnames(coadat1)[5:6]<-c("Date", "Time")
+
+
+# Then I repeat this and parse the date into year, month, and day (then hour, minute, second), so I can easily subset by year
+# Copy date to parse out, maintain original date
+coadat1$Date2 <- coadat1$Date
+
+
+coadat1<-cSplit(coadat1, "Date2", sep = "-", type.convert = FALSE)
+colnames(coadat1)[7:9]<-c("Year", "Month", "Day")
+
+coadat1$Time2 <- coadat1$Time
+
+coadat1<-cSplit(coadat1, "Time2", sep = ":", type.convert = FALSE)
+colnames(coadat1)[10:12]<-c("Hour", "Minute", "Second")
+
+coadat1$Date <- as.Date(coadat1$Date)
+coadat1$Time <- as.times(coadat1$Time)
+coadat1$Year <- as.numeric(coadat1$Year)
+coadat1$Month <- as.numeric(coadat1$Month)
+coadat1$Day <- as.numeric(coadat1$Day)
+coadat1$Hour <- as.numeric(coadat1$Hour)
+coadat1$Minute <- as.numeric(coadat1$Minute)
+coadat1$Second <- as.numeric(coadat1$Second)
+
+coadat1[is.na(coadat1)] <- 0
+
+#diel period
+for (i in 1:nrow(coadat1)){
+  if (coadat1$Hour[i] >= 0 & coadat1$Hour[i] < 6){
+    coadat1$period[i] <- 'Night'
+  }else if (coadat1$Hour[i] >= 6 & coadat1$Hour[i] < 12){
+    coadat1$period[i] <- 'Dawn'
+  }else if (coadat1$Hour[i] >= 12 & coadat1$Hour[i] < 18){
+    coadat1$period[i] <- 'Day'
+  }else if (coadat1$Hour[i] >= 18 & coadat1$Hour[i] <= 24){
+    coadat1$period[i] <- 'Dusk'
+  }
+}
+
+
+#season
+for (i in 1:nrow(coadat1)){
+  if (coadat1$Month[i] >= 8 && coadat1$Month[i] <= 10){
+    coadat1$periody[i] <- 'ew'
+  }else if (coadat1$Month[i] >= 2 && coadat1$Month[i] <= 4){
+    coadat1$periody[i] <- 'ed'
+  }else if (coadat1$Month[i] >= 5 && coadat1$Month[i] <= 7){
+    coadat1$periody[i] <- 'd'
+  }else{
+    coadat1$periody[i] <- 'w'
+  }
+}
+
+#create list with number of occurences with each combination
+COA_list <- coadat1 %>% as.data.frame() %>%
+  group_by(Transmitter, period, periody) %>%
+  # Calculate the number of occurrences with this transmitter, year, diel combination.
+  dplyr::summarise(count = n()) %>% 
+  ungroup() %>%
+  # Combine the columns as unique ID.
+  mutate(TYD = paste0(Transmitter, "_", period, "_", periody)) %>% 
+  filter(count >= 5) %>% #keep combinations with only 5 or above observations
+  # Select only 2013.
+  #filter(Year == 2013) %>% 
+  # Make into list based on TYD.
+  group_split(TYD) 
+
+extent <- st_read('data/trainr2021_mask.shp')
+#create list to put results into
+rand_list <- list()
+
+
+for (i in 1:length(COA_list)) {
+  # For reproducibility.
+  set.seed(19) 
+  
+  # Distribute x number of points across defined available resource unit for this particular transmitter, year, diel period combination.
+  randLocs <- sf::st_sample(extent, size = COA_list[[i]]$count, type = 'random') %>% st_transform(2958) %>% sfc_to_df()
+  
+  set.seed(19)
+  #  Get and randomize coordinates.
+  xcoor <- as.data.frame(randLocs[,3])
+  ycoor <- as.data.frame(randLocs[,4])
+  # Randomize coordinates.
+  x.random <- as.data.frame(xcoor[sample(1:nrow(xcoor)), ])
+  y.random <- as.data.frame(ycoor[sample(1:nrow(ycoor)), ])
+  coords.random <- as.data.frame(c(x.random, y.random))
+  names(coords.random) <- c('x', 'y')
+  # Make a data frame that matches the number of COAs for that individual.
+  df <- do.call('rbind', COA_list[i]) 
+  # Replicate the info to match the observed.
+  df2 <- rbind(df, df[rep(1, (df$count - 1)), ]) 
+  # Delete row names.
+  rownames(df2) <- NULL 
+  df2$x <- coords.random[, 1]
+  # Put the coordinates from the random sample into the data frame.
+  df2$y <- coords.random[, 2] 
+  #convert df2 into dataframe
+  #df2 <- df2 %>% st_to_sf()
+  # Label these detections are background points (0) (opposed to observed COAs (1)).
+  df2$RealDets <- 0
+  
+  
+  
+  # Place completed iteration into a list.
+  rand_list[[i]] <- df2
+}
+
+RandomPts <- as.data.frame(do.call("rbind", rand_list)) #make the list into a dataframe
+
+#combine real COAs with pseudo-absences
+coadat1$RealDets <- 1
+coadat1 <- coadat1 %>% mutate(TYD = paste0(Transmitter, "_", period, "_", periody))
+#remove data that we do not have random points for (combinations with less than 5 COAs)
+coadat1 <- coadat1 %>% filter(TYD %in% RandomPts$TYD)
+
+#make dataframes have same columns
+coadat1 <- coadat1 %>% select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
+RandomPts <- RandomPts %>% select(-count)
+
+alldat <- rbind(coadat1, RandomPts)
+head(alldat)
+
+```
+
+## Adding environmental data
+Now we have our presence/absence dataset! Now we need to add environmental variables as predictors of the presence/absence. These can be anything from depth contours to benthic habitat data to water quality parameters. But be careful to think about scale.
+
+The environmental data we are using for this exercise is benthic habitat data from field surveys and includes:
+
+     - tt: Total Thalassia Cover
+     - hw: Total Halodule Cover
+     - cov: Total SAV Cover
+     - sdcov: Standard Deviation of SAV Cover
+     - numsp: Number of Species
+
+These variables are interpolated across the array using Kriging at a spacial resolution of 75m, since that is the average detection range of the receivers. Data is in a raster format
+
+We then can make the presence/absence data into a spatial dataframe and extract the values from the rasters.
+```{r}
+#now we have our full dataset with presences and pseudo-absences!!! 
+#Now we can extract environmental variables to model habitat selection
+#Load in rasters - all rasters are interpolated maps from either surveys performed by Rodemann et al. or by FWRI as part of the Fisheries Habitat Assessment Program (FHAP) in Florida Bay
+cov_2020 <- rast('data/cov2020.tif') #percent SAV cover
+sdcov_2020 <- rast('data/sdcov2020.tif') #standard deviation of cover
+numsp_2020 <- rast('data/num2020.tif') #number of SAV species
+hw_2020 <- rast('data/hw2020.tif') #Halodule wrightii cover
+tt_2020 <- rast('data/tt2020.tif') #Thalassia testudinum cover
+
+#crop all rasters to same extent
+#load in shapefile for extent
+extent <- st_read('data/trainr2021_mask.shp')
+
+cov2020 <- terra::crop(cov_2020, extent)
+sdcov2020 <- terra::crop(sdcov_2020, extent)
+num2020 <- terra::crop(numsp_2020, extent)
+hw2020 <- terra::crop(hw_2020, extent)
+tt2020 <- terra::crop(tt_2020, extent)
+
+
+#We have all the rasters at the same spatial extent. Now stack them to get ready for extraction
+rastdat <- c(cov2020, sdcov2020, num2020, hw2020, tt2020)
+rastdat <- terra::project(rastdat, 'epsg:2958')
+
+#extract habitat data at each point - need to put the points into a spatial format first
+datcoor <- alldat %>% 
+  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  st_set_crs(2958) # using 2958 for projected
+
+datextract <- terra::extract(rastdat, datcoor) #extract data at each point
+datrf <- cbind(datextract, alldat) %>% drop_na() #combine dataframes and remove NAs (only happens if cell is not kept within cropped raster)
+head(datrf)
+```
+
+## Modelling with Random Forest
+Now we can finally get into modelling with Random Forests! We will be using the package mlr3, a very flexible package that creates wrappers for other machine learning packages. Then mlr3 aids with training the model and interpretation.
+
+First step is to select the training/testing data. This allows you to use a different dataset to evaluate your model. We chose a 70/30 split. We then turn the datasets into a spatial dataset to run RF with spatial considerations.
+```{r}
+#datrf is the dataset that we will use for all of our models. We have temporal components we can put into GLMM and GAMs as well as individual data for random effects
+#let's get into modelling this with rf!
+
+#need to remove all columns that we are not using for now
+datrf <- datrf %>% select(-c(Transmitter, period, periody, TYD))
+
+#Set seed for replications
+set.seed(19)
+
+datrf$RealDets <- as.factor(datrf$RealDets)
+
+# Randomly select 70% of the data frame for the training dataset
+RSF_ar.train <- datrf[sample(1:nrow(datrf), nrow(datrf) * 0.7, replace = FALSE), ]
+# Remainder (i.e., 30%) becomes the test dataset.
+RSF_ar.test <- datrf[!(datrf$ID %in% RSF_ar.train$ID), ] 
+
+
+#take out ID column
+RSF_ar.test <- RSF_ar.test %>% dplyr::select(-ID) %>% drop_na()
+RSF_ar.train <- RSF_ar.train %>% dplyr::select(-ID) %>% drop_na()
+
+
+
+#turn datasets into sf objects for spatial classification
+RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>% 
+  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  st_set_crs(2958) 
+
+RSF_ar.test1 <- RSF_ar.test %>% 
+  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  st_set_crs(2958)
+```
+
+
+## Training, tuning, and running RF model
+We are all set up! Are you excited? Well, first we need to set up learners for running the Randon Forest model and then tune what are called "hyperparameters." Hyperparameters are parameters (imagine that) that set up how the RF model runs. These include things like mtry (# of predictor variables in each tree), sample fraction (fraction of observations to be used in each tree), and minimum node size (minimum number of datapoints in a node). Tuning hyperparameters can take a while because it is a random or grid search that minimized the out-of-box error. This example should only take 5 minutes to run, but you can get fancy and have the tuning run for multiple hours to get the best model that you can.
+
+
+```{r}
+# Set tasks for training and test datasets.
+task_trout.train <- as_task_classif_st(
+  RSF_ar.train1, target = "RealDets", positive = '1'
+)
+str(task_trout.train)
+task_trout.train
+
+task_trout.test <- as_task_classif_st(
+  x = RSF_ar.test1, target = "RealDets",
+  positive = "1"
+)
+
+# Make learner.
+learner <-lrn(
+  "classif.ranger",
+  predict_type = "prob",
+  mtry  = to_tune(1, ncol(RSF_ar.train) - 4),
+  sample.fraction = to_tune(0.2, 0.9),
+  min.node.size = to_tune(1,10),
+  importance = 'impurity'
+)
+
+#tune hyperparameters
+instance = ti(
+  task = task_trout.train,
+  learner = learner,
+  resampling = rsmp("cv", folds = 5),
+  measures = msr("classif.ce"),
+  terminator = trm("none")
+)
+
+tuner = mlr3tuning::tnr("grid_search", resolution = 5, batch_size = 5)
+tuner$optimize(instance) # Takes ~ 4 minutes on my relatively fast computer
+beep(1)
+
+#store tuned hyperparameters in learner
+learner$param_set$values <- instance$result_learner_param_vals
+
+```
+
+Now we can train and view the model!
+
+```{r}
+#finally! We can train our model with the train function
+learner$train(task_trout.train)
+
+#let's quickly look at the model
+learner$model
+```
+
+And finally, let's look at the accuracy of the model
+```{r}
+measures <- msrs(c('classif.acc'))
+
+pred_train <- learner$predict(task_trout.train)
+pred_train$confusion
+pred_train$score(measures)
+
+
+pred_test <- learner$predict(task_trout.test)
+pred_test$confusion
+pred_test$score(measures)
+```
+
+## Interpretation of the model
+Now comes the truly fun part: interpreting your results! This is done in three steps. The first step is to look at variable importance. This ranks all of the predictor variables in order of most to least influencial on the model results. The top predictor variable is thus the "most important" variable for predicting habitat selection.
+
+```{r}
+store_backends = T
+task_trout.train <- as_task_classif_st(
+  RSF_ar.train1, target = "RealDets", positive = '1'
+)
+learner <-lrn(
+  "classif.ranger",
+  predict_type = "prob",
+  mtry  = to_tune(1, ncol(RSF_ar.train) - 4),
+  sample.fraction = to_tune(0.2, 0.9),
+  min.node.size = to_tune(1,10),
+  importance = 'impurity'
+)
+learner$param_set$values <- instance$result_learner_param_vals
+learner$train(task_trout.train)
+
+#Let's look at the importance rank of each variable!
+var_fil <- flt('importance', learner = learner)
+var_fil$calculate(task_trout.train)
+
+#importance with iml package
+x_trout <- RSF_ar.train %>% dplyr::select(-RealDets) 
+# Create "Predictor" object to interpret findings via the iml package.
+predictor_trout <- Predictor$new(learner, data = x_trout, y = RSF_ar.train$RealDets) 
+
+imp_trout <- FeatureImp$new(predictor_trout, loss = "ce") # Calculate importance.
+
+imp_df_trout <- imp_trout$results 
+imp_trout$plot()
+```
+
+The second step is looking at the marginal effects plots. These plots illustrate how one predictor variable impacts the probability of selection when all other predictor variables are held constant. We will go through 3 variables to discuss
+
+```{r}
+#so halodule cover is the most important variable. Let's investigate how it impacts the presence of trout
+
+effect_hw <- FeatureEffect$new(predictor_trout, feature = c('hw2020'), method = 'pdp')
+effect_hw$plot()
+
+
+#we can see as halodule cover goes up, probability of presence goes up. What about thalassia?
+effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
+effect_tt$plot()
+
+#opposite effect. Makes sense. How about cover?
+effect_cov <- FeatureEffect$new(predictor_trout, feature = c('cov2020'), method = 'pdp')
+effect_cov$plot()
+
+#low cover and high cover. Makes sense with low cover as it is often associated with Halodule beds. High cover is more interesting
+
+```
+
+And finally the third way of visualizing the results is of course across space. You can do this by layering the rasters of your predictor variables and using your model to predict probability of presence. The outcome from these data is going to be a little weird, but that is probably because of the sample size and the variables we are using. Usually you want more data for this sort of analysis!
+
+```{r}
+#let's now create a spatial representation of presence/absence from the model!
+plot(rastdat)
+
+
+task_trout.train <- as_task_classif_st(
+  RSF_ar.train1, target = "RealDets", positive = '1'
+)
+learner <-lrn(
+  "classif.ranger",
+  predict_type = "prob",
+  mtry  = to_tune(1, ncol(RSF_ar.train) - 4),
+  sample.fraction = to_tune(0.2, 0.9),
+  min.node.size = to_tune(1,10),
+  importance = 'impurity'
+)
+learner$param_set$values <- instance$result_learner_param_vals
+learner$train(task_trout.train)
+
+#need to do it kind of manually because mlr3spatial does not support probability surfaces
+
+newdata <- as.data.table(as.data.frame(rastdat, na.rm = T))# BETTER TO USE THIS? LG, I don't think u want to drop the NAs as it wont match the raster. Still not working for me, so had to drop but leads to strange predictions
+
+pred = learner$predict_newdata(newdata)
+pred$prob
+
+walk(task_trout.train$class_names, function(class) {
+  raster = rast(
+    ext(rastdat), 
+    resolution = res(rastdat), 
+    crs = crs(rastdat), 
+    vals = pred$data$prob[, class],
+    names = class)
+  add(rastdat) = raster 
+})
+
+plot(rastdat)
+plot(rastdat$`1`) #the prediction of presence!
+
+# Looks messy, but that is because of the nature of the data (and the small amount we are using)
+
+```
+
+Congratulations, you've now worked through an example of going from detections to implementing RSFs through Random Forest.
+Now we will implement the same approach with a Generalized Linear Mixed-Effect Model (GLMM) using the glmmTMB package in the next example.
+GLMMs offer easier interpretability, handle random effects (i.e., individual variation), and can better account for autocorrelation compared to Random Forest.

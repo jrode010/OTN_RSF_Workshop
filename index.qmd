@@ -8,11 +8,11 @@ format: html
 
 Lucas Griffin (University of South Florida, USA)
 
-Jonathan Rodemann (Florida International University, USA) – jrodeman\@fiu.edu
+Jonathan Rodemann (Florida International University, USA)
 
 ## Co-conveners:
 
-Robert Lennox (OTN)
+Robert Lennox (OTN, Canada)
 
 ## About this workshop:
 

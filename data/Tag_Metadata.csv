@@ -1,0 +1,15 @@
+Animal_ID,Tag_Type,Tag_Manufacturer,Tag_Model,Tag_ID_Code,Tag_Code_Space,Tag_ID_Code_Standard,Tag_Owner_Organization,Common_Name,Scientific_Name
+Trout15,Acoustic,Vemco,V9-2L,37771,A69-1602,A69-1602-37771,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout8,Acoustic,Vemco,V9-2L,37772,A69-1602,A69-1602-37772,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout7,Acoustic,Vemco,V9-2L,37773,A69-1602,A69-1602-37773,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout6,Acoustic,Vemco,V9-2L,37774,A69-1602,A69-1602-37774,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout21,Acoustic,Vemco,V9-2L,37778,A69-1602,A69-1602-37778,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout19,Acoustic,Vemco,V9-2L,37779,A69-1602,A69-1602-37779,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout10,Acoustic,Vemco,V9-2L,37783,A69-1602,A69-1602-37783,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout20,Acoustic,Vemco,V9-2L,37787,A69-1602,A69-1602-37787,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout18,Acoustic,Vemco,V9-2L,37788,A69-1602,A69-1602-37788,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout13,Acoustic,Vemco,V9-2L,37790,A69-1602,A69-1602-37790,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout24,Acoustic,Vemco,V9-2L,37798,A69-1602,A69-1602-37798,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout46,Acoustic,Vemco,V9-2L,37380,A69-1602,A69-1602-37380,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout39,Acoustic,Vemco,V9-2L,37385,A69-1602,A69-1602-37385,FIU,Spotted Seatrout,Cynoscion nebulosus
+Trout35,Acoustic,Vemco,V9-2L,37391,A69-1602,A69-1602-37391,FIU,Spotted Seatrout,Cynoscion nebulosus
