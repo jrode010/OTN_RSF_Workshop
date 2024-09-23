@@ -13,6 +13,8 @@ website:
       href: RF.html
     - text: "RSF with GLMM"
       href: GLMM.html
+    - text: 'RSF with GAMs'
+      href: GAM.html
 
 format:
   html:

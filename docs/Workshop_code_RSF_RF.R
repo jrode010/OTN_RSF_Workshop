@@ -644,7 +644,8 @@ accuracy_gam
 
 # Predict probabilities on spatial grid using GAMs
 # Convert rasters into a data frame and predict onto spatial data
-newdata_gam <- as.data.table(as.data.frame(rastdat)) # Use rastdat from earlier
+newdata_gam <- as.data.table(as.data.frame(rastdat)) %>% 
+  mutate(Transmitter = "place-holder")# Use rastdat from earlier
 newdata_gam$predicted_probs_gam <- predict(gam_model, newdata = newdata_gam, type = "response")
 
 # Create a raster from predicted probabilities
