@@ -408,6 +408,8 @@ learner$train(task_trout.train)
 #let's quickly look at the model
 learner$model
 
+saveRDS(learner, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/spatial_learner.RDS')
+saveRDS(task_trout.train, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/spatial_task_train.RDS')
 #Accuracy of model - first on training data, then testing data
 measures <- msrs(c('classif.acc'))
 

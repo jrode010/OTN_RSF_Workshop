@@ -48,7 +48,6 @@ mlr3misc
 jsonlite
 uuid
 fpc
-mlr3measures
 jpeg
 mlr3fselect
 MASS
@@ -93,7 +92,6 @@ hms
 munsell
 globals
 class
-RhpcBLASctl
 glue
 mlr3pipelines
 robustbase

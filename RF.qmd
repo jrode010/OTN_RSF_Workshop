@@ -70,7 +70,7 @@ trout_det <- ggplot(dt, aes(Date_time, Transmitter, col = Receiver)) +
 trout_det
 
 dat <- merge(dt, stations, by="Station.Name")
-dat <- dat %>% select(-c(X, Receiver.x, Receiver.y, SAV))
+dat <- dat %>% dplyr::select(-c(X, Receiver.x, Receiver.y, SAV))
 str(dat)
 ```
 
@@ -87,14 +87,14 @@ dat$DateTime <- cut(dat$Date_time, breaks = ex) #cut up the data to calculate CO
 str(dat)
 
 #Calculation of COAs
-coadat <- dat %>% group_by(DateTime, Transmitter) %>% mutate(n = n()) %>% filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
-  group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
-  select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
+coadat <- dat %>% dplyr::group_by(DateTime, Transmitter) %>% dplyr::mutate(n = n()) %>% dplyr::filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
+  dplyr::group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
+  dplyr::select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
 head(coadat)
 
 #So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs
 coadat1 <- coadat %>% as.data.frame() %>% group_by(Transmitter) %>%
-  mutate(count = n()) %>% filter(count >= 50) %>% select(-c(n, count)) %>% distinct()
+  mutate(count = n()) %>% filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% distinct()
 str(coadat1)
 ```
 
@@ -136,7 +136,7 @@ ggplot() +
 #this is now projected data, so revert it back!
 coor <- as.data.frame(do.call('rbind', sfdat$geometry)) %>% rename(x = V1, y = V2)
 
-coadat1 <- cbind(coadat1, coor) %>% select(-c(lat.coa, long.coa))
+coadat1 <- cbind(coadat1, coor) %>% dplyr::select(-c(lat.coa, long.coa))
 
 #As you can see, the data is limited to our grid of receivers. This is a downside to acoustic telemetry vs positioning solvers
 ```
@@ -278,8 +278,8 @@ coadat1 <- coadat1 %>% mutate(TYD = paste0(Transmitter, "_", period, "_", period
 coadat1 <- coadat1 %>% filter(TYD %in% RandomPts$TYD)
 
 #make dataframes have same columns
-coadat1 <- coadat1 %>% select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
-RandomPts <- RandomPts %>% select(-count)
+coadat1 <- coadat1 %>% dplyr::select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
+RandomPts <- RandomPts %>% dplyr::select(-count)
 
 alldat <- rbind(coadat1, RandomPts)
 head(alldat)
@@ -344,7 +344,7 @@ First step is to select the training/testing data. This allows you to use a diff
 #let's get into modelling this with rf!
 
 #need to remove all columns that we are not using for now
-datrf <- datrf %>% select(-c(Transmitter, period, periody, TYD))
+datrf <- datrf %>% dplyr::select(-c(Transmitter, period, periody, TYD))
 
 #Set seed for replications
 set.seed(19)
@@ -361,16 +361,17 @@ RSF_ar.test <- datrf[!(datrf$ID %in% RSF_ar.train$ID), ]
 RSF_ar.test <- RSF_ar.test %>% dplyr::select(-ID) %>% drop_na()
 RSF_ar.train <- RSF_ar.train %>% dplyr::select(-ID) %>% drop_na()
 
-
+RSF_ar.test <- RSF_ar.test %>% dplyr::select(-c(x,y))
+RSF_ar.train <- RSF_ar.train %>% dplyr::select(-c(x,y))
 
 #turn datasets into sf objects for spatial classification
-RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>% 
-  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
-  st_set_crs(2958) 
+#RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>% 
+  #st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  #st_set_crs(2958) 
 
-RSF_ar.test1 <- RSF_ar.test %>% 
-  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
-  st_set_crs(2958)
+#RSF_ar.test1 <- RSF_ar.test %>% 
+  #st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  #st_set_crs(2958)
 ```
 
 
@@ -380,14 +381,14 @@ We are all set up! Are you excited? Well, first we need to set up learners for r
 
 ```{r}
 # Set tasks for training and test datasets.
-task_trout.train <- as_task_classif_st(
-  RSF_ar.train1, target = "RealDets", positive = '1'
+task_trout.train <- TaskClassif$new(
+  'RSF_ar.train', backend = RSF_ar.train, target = "RealDets", positive = '1'
 )
 str(task_trout.train)
 task_trout.train
 
-task_trout.test <- as_task_classif_st(
-  x = RSF_ar.test1, target = "RealDets",
+task_trout.test <- TaskClassif$new(
+  'RSF_ar.test', backend = RSF_ar.test, target = "RealDets",
   positive = "1"
 )
 
@@ -410,7 +411,7 @@ instance = ti(
   terminator = trm("none")
 )
 
-tuner = mlr3tuning::tnr("grid_search", resolution = 5, batch_size = 5)
+tuner = mlr3tuning::tnr("grid_search", resolution = 2, batch_size = 2)
 tuner$optimize(instance) # Takes ~ 4 minutes on my relatively fast computer
 beep(1)
 
@@ -444,104 +445,15 @@ pred_test$score(measures)
 ```
 
 ## Interpretation of the model
-Now comes the truly fun part: interpreting your results! This is done in three steps. The first step is to look at variable importance. This ranks all of the predictor variables in order of most to least influencial on the model results. The top predictor variable is thus the "most important" variable for predicting habitat selection.
-
-```{r}
-store_backends = T
-task_trout.train <- as_task_classif_st(
-  RSF_ar.train1, target = "RealDets", positive = '1'
-)
-learner <-lrn(
-  "classif.ranger",
-  predict_type = "prob",
-  mtry  = to_tune(1, ncol(RSF_ar.train) - 4),
-  sample.fraction = to_tune(0.2, 0.9),
-  min.node.size = to_tune(1,10),
-  importance = 'impurity'
-)
-learner$param_set$values <- instance$result_learner_param_vals
-learner$train(task_trout.train)
-
-#Let's look at the importance rank of each variable!
-var_fil <- flt('importance', learner = learner)
-var_fil$calculate(task_trout.train)
-
-#importance with iml package
-x_trout <- RSF_ar.train %>% dplyr::select(-RealDets) 
-# Create "Predictor" object to interpret findings via the iml package.
-predictor_trout <- Predictor$new(learner, data = x_trout, y = RSF_ar.train$RealDets) 
-
-imp_trout <- FeatureImp$new(predictor_trout, loss = "ce") # Calculate importance.
-
-imp_df_trout <- imp_trout$results 
-imp_trout$plot()
-```
+Now comes the truly fun part: interpreting your results! This is done in three steps. The first step is to look at variable importance. This ranks all of the predictor variables in order of most to least influencial on the model results. The top predictor variable is thus the "most important" variable for predicting habitat selection. 
 
 The second step is looking at the marginal effects plots. These plots illustrate how one predictor variable impacts the probability of selection when all other predictor variables are held constant. We will go through 3 variables to discuss
 
-```{r}
-#so halodule cover is the most important variable. Let's investigate how it impacts the presence of trout
-
-effect_hw <- FeatureEffect$new(predictor_trout, feature = c('hw2020'), method = 'pdp')
-effect_hw$plot()
-
-
-#we can see as halodule cover goes up, probability of presence goes up. What about thalassia?
-effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
-effect_tt$plot()
-
-#opposite effect. Makes sense. How about cover?
-effect_cov <- FeatureEffect$new(predictor_trout, feature = c('cov2020'), method = 'pdp')
-effect_cov$plot()
-
-#low cover and high cover. Makes sense with low cover as it is often associated with Halodule beds. High cover is more interesting
-
-```
-
 And finally the third way of visualizing the results is of course across space. You can do this by layering the rasters of your predictor variables and using your model to predict probability of presence. The outcome from these data is going to be a little weird, but that is probably because of the sample size and the variables we are using. Usually you want more data for this sort of analysis!
 
-```{r}
-#let's now create a spatial representation of presence/absence from the model!
-plot(rastdat)
+This code is not working for the website, so we will go to the actual code for this
 
 
-task_trout.train <- as_task_classif_st(
-  RSF_ar.train1, target = "RealDets", positive = '1'
-)
-learner <-lrn(
-  "classif.ranger",
-  predict_type = "prob",
-  mtry  = to_tune(1, ncol(RSF_ar.train) - 4),
-  sample.fraction = to_tune(0.2, 0.9),
-  min.node.size = to_tune(1,10),
-  importance = 'impurity'
-)
-learner$param_set$values <- instance$result_learner_param_vals
-learner$train(task_trout.train)
-
-#need to do it kind of manually because mlr3spatial does not support probability surfaces
-
-newdata <- as.data.table(as.data.frame(rastdat, na.rm = T))# BETTER TO USE THIS? LG, I don't think u want to drop the NAs as it wont match the raster. Still not working for me, so had to drop but leads to strange predictions
-
-pred = learner$predict_newdata(newdata)
-pred$prob
-
-walk(task_trout.train$class_names, function(class) {
-  raster = rast(
-    ext(rastdat), 
-    resolution = res(rastdat), 
-    crs = crs(rastdat), 
-    vals = pred$data$prob[, class],
-    names = class)
-  add(rastdat) = raster 
-})
-
-plot(rastdat)
-plot(rastdat$`1`) #the prediction of presence!
-
-# Looks messy, but that is because of the nature of the data (and the small amount we are using)
-
-```
 
 Congratulations, you've now worked through an example of going from detections to implementing RSFs through Random Forest.
 Now we will implement the same approach with a Generalized Linear Mixed-Effect Model (GLMM) using the glmmTMB package in the next example.
