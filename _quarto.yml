@@ -1,0 +1,17 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "OTN Symposium 2024 RSF Workshop"
+  navbar:
+    left:
+
+    - text: "R & Rstudio"
+      href: Rinst.html
+
+format:
+  html:
+    theme: yeti
+    highlight: haddock
+    css: styles.css
