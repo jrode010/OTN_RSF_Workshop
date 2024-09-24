@@ -87,14 +87,15 @@ dat$DateTime <- cut(dat$Date_time, breaks = ex) #cut up the data to calculate CO
 str(dat)
 
 #Calculation of COAs
+set.seed(19)
 coadat <- dat %>% dplyr::group_by(DateTime, Transmitter) %>% dplyr::mutate(n = n()) %>% dplyr::filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
   dplyr::group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
   dplyr::select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
 head(coadat)
 
 #So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs
-coadat1 <- coadat %>% as.data.frame() %>% group_by(Transmitter) %>%
-  mutate(count = n()) %>% filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% distinct()
+coadat1 <- coadat %>% as.data.frame() %>% dplyr::group_by(Transmitter) %>%
+  dplyr::mutate(count = n()) %>% dplyr::filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% dplyr::distinct()
 str(coadat1)
 ```
 
@@ -361,17 +362,15 @@ RSF_ar.test <- datrf[!(datrf$ID %in% RSF_ar.train$ID), ]
 RSF_ar.test <- RSF_ar.test %>% dplyr::select(-ID) %>% drop_na()
 RSF_ar.train <- RSF_ar.train %>% dplyr::select(-ID) %>% drop_na()
 
-RSF_ar.test <- RSF_ar.test %>% dplyr::select(-c(x,y))
-RSF_ar.train <- RSF_ar.train %>% dplyr::select(-c(x,y))
 
 #turn datasets into sf objects for spatial classification
-#RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>% 
-  #st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
-  #st_set_crs(2958) 
+RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>% 
+  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  st_set_crs(2958) 
 
-#RSF_ar.test1 <- RSF_ar.test %>% 
-  #st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
-  #st_set_crs(2958)
+RSF_ar.test1 <- RSF_ar.test %>% 
+  st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
+  st_set_crs(2958)
 ```
 
 
@@ -381,14 +380,14 @@ We are all set up! Are you excited? Well, first we need to set up learners for r
 
 ```{r}
 # Set tasks for training and test datasets.
-task_trout.train <- TaskClassif$new(
-  'RSF_ar.train', backend = RSF_ar.train, target = "RealDets", positive = '1'
+task_trout.train <- as_task_classif_st(
+  RSF_ar.train1, target = "RealDets", positive = '1',
 )
 str(task_trout.train)
 task_trout.train
 
-task_trout.test <- TaskClassif$new(
-  'RSF_ar.test', backend = RSF_ar.test, target = "RealDets",
+task_trout.test <- as_task_classif_st(
+  x = RSF_ar.test1, target = "RealDets",
   positive = "1"
 )
 

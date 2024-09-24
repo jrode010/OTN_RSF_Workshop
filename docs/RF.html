@@ -132,6 +132,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link active" href="./RF.html" aria-current="page"> 
 <span class="menu-text">RSF with RF</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./GLMM.html"> 
+<span class="menu-text">RSF with GLMM</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./GAM.html"> 
+<span class="menu-text">RSF with GAMs</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -380,46 +388,47 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ DateTime           : Factor w/ 7368 levels "2020-03-01","2020-03-01 01:00:00",..: 6233 6902 5190 5617 6903 5616 6902 4466 5615 6902 ...</span></span>
 <span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">#Calculation of COAs</span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>coadat <span class="ot">&lt;-</span> dat <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">group_by</span>(DateTime, Transmitter) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">n =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(n <span class="sc">&gt;=</span> <span class="dv">5</span>) <span class="sc">%&gt;%</span> <span class="co">#Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)</span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(DateTime, Transmitter) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">lat.coa =</span> <span class="fu">mean</span>(Latitude), <span class="at">long.coa =</span> <span class="fu">mean</span>(Longitude)) <span class="sc">%&gt;%</span> <span class="co">#calculate COAs</span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) <span class="sc">%&gt;%</span> <span class="fu">distinct</span>() <span class="co">#remove uneeded columns and take out repeated columns</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(coadat)</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="do">## # A tibble: 6 × 5</span></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="do">## # Groups:   DateTime, Transmitter [6]</span></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="do">##   Transmitter    DateTime                n lat.coa long.coa</span></span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="do">##   &lt;chr&gt;          &lt;fct&gt;               &lt;int&gt;   &lt;dbl&gt;    &lt;dbl&gt;</span></span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="do">## 1 A69-1602-37787 2020-12-13 13:00:00    11    25.1    -80.8</span></span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="do">## 2 A69-1602-37771 2020-10-03 05:00:00    15    25.1    -80.8</span></span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="do">## 3 A69-1602-37787 2020-10-20 23:00:00    14    25.1    -80.8</span></span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="do">## 4 A69-1602-37787 2020-10-20 22:00:00    19    25.1    -80.8</span></span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="do">## 5 A69-1602-37783 2020-08-12 06:00:00     6    25.1    -80.8</span></span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="do">## 6 A69-1602-37798 2020-11-15 15:00:00    12    25.1    -80.8</span></span>
-<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="co">#So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs</span></span>
-<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>coadat1 <span class="ot">&lt;-</span> coadat <span class="sc">%&gt;%</span> <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(Transmitter) <span class="sc">%&gt;%</span></span>
-<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">count =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(count <span class="sc">&gt;=</span> <span class="dv">50</span>) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(n, count)) <span class="sc">%&gt;%</span> <span class="fu">distinct</span>()</span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(coadat1)</span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="do">## gropd_df [2,113 × 4] (S3: grouped_df/tbl_df/tbl/data.frame)</span></span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ Transmitter: chr [1:2113] "A69-1602-37787" "A69-1602-37771" "A69-1602-37787" "A69-1602-37787" ...</span></span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ DateTime   : Factor w/ 7368 levels "2020-03-01","2020-03-01 01:00:00",..: 6902 5190 5616 5615 3943 6232 3951 7008 5395 5370 ...</span></span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ lat.coa    : num [1:2113] 25.1 25.1 25.1 25.1 25.1 ...</span></span>
-<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ long.coa   : num [1:2113] -80.8 -80.8 -80.8 -80.8 -80.8 ...</span></span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="do">##  - attr(*, "groups")= tibble [11 × 2] (S3: tbl_df/tbl/data.frame)</span></span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="do">##   ..$ Transmitter: chr [1:11] "A69-1602-37380" "A69-1602-37771" "A69-1602-37773" "A69-1602-37774" ...</span></span>
-<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="do">##   ..$ .rows      : list&lt;int&gt; [1:11] </span></span>
-<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:458] 34 71 79 142 160 174 186 198 204 239 ...</span></span>
-<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:70] 2 16 17 20 29 31 38 46 53 58 ...</span></span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:191] 349 350 354 369 387 396 435 448 449 457 ...</span></span>
-<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:154] 326 347 382 385 395 399 428 439 455 474 ...</span></span>
-<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:232] 154 231 242 256 268 273 280 281 285 315 ...</span></span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:209] 26 27 35 40 42 49 50 51 55 57 ...</span></span>
-<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:94] 5 7 18 85 114 181 212 219 243 298 ...</span></span>
-<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:166] 1 3 4 8 13 56 108 109 128 130 ...</span></span>
-<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:62] 32 36 101 115 117 129 131 156 162 169 ...</span></span>
-<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:356] 9 10 11 19 21 22 28 30 33 37 ...</span></span>
-<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:121] 6 12 14 15 23 24 25 139 193 264 ...</span></span>
-<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..@ ptype: int(0) </span></span>
-<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="do">##   ..- attr(*, ".drop")= logi TRUE</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">19</span>)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>coadat <span class="ot">&lt;-</span> dat <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">group_by</span>(DateTime, Transmitter) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">n =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(n <span class="sc">&gt;=</span> <span class="dv">5</span>) <span class="sc">%&gt;%</span> <span class="co">#Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(DateTime, Transmitter) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">lat.coa =</span> <span class="fu">mean</span>(Latitude), <span class="at">long.coa =</span> <span class="fu">mean</span>(Longitude)) <span class="sc">%&gt;%</span> <span class="co">#calculate COAs</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) <span class="sc">%&gt;%</span> <span class="fu">distinct</span>() <span class="co">#remove uneeded columns and take out repeated columns</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(coadat)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="do">## # A tibble: 6 × 5</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="do">## # Groups:   DateTime, Transmitter [6]</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="do">##   Transmitter    DateTime                n lat.coa long.coa</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="do">##   &lt;chr&gt;          &lt;fct&gt;               &lt;int&gt;   &lt;dbl&gt;    &lt;dbl&gt;</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="do">## 1 A69-1602-37787 2020-12-13 13:00:00    11    25.1    -80.8</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="do">## 2 A69-1602-37771 2020-10-03 05:00:00    15    25.1    -80.8</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="do">## 3 A69-1602-37787 2020-10-20 23:00:00    14    25.1    -80.8</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="do">## 4 A69-1602-37787 2020-10-20 22:00:00    19    25.1    -80.8</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="do">## 5 A69-1602-37783 2020-08-12 06:00:00     6    25.1    -80.8</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="do">## 6 A69-1602-37798 2020-11-15 15:00:00    12    25.1    -80.8</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="co">#So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>coadat1 <span class="ot">&lt;-</span> coadat <span class="sc">%&gt;%</span> <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">group_by</span>(Transmitter) <span class="sc">%&gt;%</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">count =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(count <span class="sc">&gt;=</span> <span class="dv">50</span>) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(n, count)) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">distinct</span>()</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(coadat1)</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="do">## gropd_df [2,113 × 4] (S3: grouped_df/tbl_df/tbl/data.frame)</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ Transmitter: chr [1:2113] "A69-1602-37787" "A69-1602-37771" "A69-1602-37787" "A69-1602-37787" ...</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ DateTime   : Factor w/ 7368 levels "2020-03-01","2020-03-01 01:00:00",..: 6902 5190 5616 5615 3943 6232 3951 7008 5395 5370 ...</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ lat.coa    : num [1:2113] 25.1 25.1 25.1 25.1 25.1 ...</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="do">##  $ long.coa   : num [1:2113] -80.8 -80.8 -80.8 -80.8 -80.8 ...</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="do">##  - attr(*, "groups")= tibble [11 × 2] (S3: tbl_df/tbl/data.frame)</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="do">##   ..$ Transmitter: chr [1:11] "A69-1602-37380" "A69-1602-37771" "A69-1602-37773" "A69-1602-37774" ...</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="do">##   ..$ .rows      : list&lt;int&gt; [1:11] </span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:458] 34 71 79 142 160 174 186 198 204 239 ...</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:70] 2 16 17 20 29 31 38 46 53 58 ...</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:191] 349 350 354 369 387 396 435 448 449 457 ...</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:154] 326 347 382 385 395 399 428 439 455 474 ...</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:232] 154 231 242 256 268 273 280 281 285 315 ...</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:209] 26 27 35 40 42 49 50 51 55 57 ...</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:94] 5 7 18 85 114 181 212 219 243 298 ...</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:166] 1 3 4 8 13 56 108 109 128 130 ...</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:62] 32 36 101 115 117 129 131 156 162 169 ...</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:356] 9 10 11 19 21 22 28 30 33 37 ...</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..$ : int [1:121] 6 12 14 15 23 24 25 139 193 264 ...</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="do">##   .. ..@ ptype: int(0) </span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a><span class="do">##   ..- attr(*, ".drop")= logi TRUE</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#First, let's plot this in ggmap to get our bearings LG</span></span>
@@ -759,17 +768,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>RSF_ar.test <span class="ot">&lt;-</span> RSF_ar.test <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>ID) <span class="sc">%&gt;%</span> <span class="fu">drop_na</span>()</span>
 <span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>RSF_ar.train <span class="ot">&lt;-</span> RSF_ar.train <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>ID) <span class="sc">%&gt;%</span> <span class="fu">drop_na</span>()</span>
 <span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>RSF_ar.test <span class="ot">&lt;-</span> RSF_ar.test <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(x,y))</span>
-<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>RSF_ar.train <span class="ot">&lt;-</span> RSF_ar.train <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(x,y))</span>
-<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="co">#turn datasets into sf objects for spatial classification</span></span>
-<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a><span class="co">#RSF_ar.train1 &lt;- RSF_ar.train %&gt;% as_tibble() %&gt;% </span></span>
-<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">#st_as_sf(coords = c('x', 'y')) %&gt;% #set up the coordinates</span></span>
-<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>  <span class="co">#st_set_crs(2958) </span></span>
-<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="co">#RSF_ar.test1 &lt;- RSF_ar.test %&gt;% </span></span>
-<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>  <span class="co">#st_as_sf(coords = c('x', 'y')) %&gt;% #set up the coordinates</span></span>
-<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>  <span class="co">#st_set_crs(2958)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="co">#turn datasets into sf objects for spatial classification</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>RSF_ar.train1 <span class="ot">&lt;-</span> RSF_ar.train <span class="sc">%&gt;%</span> <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">'x'</span>, <span class="st">'y'</span>)) <span class="sc">%&gt;%</span> <span class="co">#set up the coordinates</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_set_crs</span>(<span class="dv">2958</span>) </span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>RSF_ar.test1 <span class="ot">&lt;-</span> RSF_ar.test <span class="sc">%&gt;%</span> </span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">'x'</span>, <span class="st">'y'</span>)) <span class="sc">%&gt;%</span> <span class="co">#set up the coordinates</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_set_crs</span>(<span class="dv">2958</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="training-tuning-and-running-rf-model" class="level2">
@@ -777,137 +784,151 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>We are all set up! Are you excited? Well, first we need to set up learners for running the Randon Forest model and then tune what are called “hyperparameters.” Hyperparameters are parameters (imagine that) that set up how the RF model runs. These include things like mtry (# of predictor variables in each tree), sample fraction (fraction of observations to be used in each tree), and minimum node size (minimum number of datapoints in a node). Tuning hyperparameters can take a while because it is a random or grid search that minimized the out-of-box error. This example should only take 5 minutes to run, but you can get fancy and have the tuning run for multiple hours to get the best model that you can.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set tasks for training and test datasets.</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>task_trout.train <span class="ot">&lt;-</span> TaskClassif<span class="sc">$</span><span class="fu">new</span>(</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'RSF_ar.train'</span>, <span class="at">backend =</span> RSF_ar.train, <span class="at">target =</span> <span class="st">"RealDets"</span>, <span class="at">positive =</span> <span class="st">'1'</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>task_trout.train <span class="ot">&lt;-</span> <span class="fu">as_task_classif_st</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  RSF_ar.train1, <span class="at">target =</span> <span class="st">"RealDets"</span>, <span class="at">positive =</span> <span class="st">'1'</span>,</span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(task_trout.train)</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="do">## Classes 'TaskClassif', 'TaskSupervised', 'Task', 'R6' &lt;TaskClassif:RSF_ar.train&gt;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="do">## Classes 'TaskClassifST', 'TaskClassif', 'TaskSupervised', 'Task', 'R6' &lt;TaskClassifST:RSF_ar.train1&gt;</span></span>
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>task_trout.train</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="do">## &lt;TaskClassif:RSF_ar.train&gt; (2763 x 6)</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="do">## &lt;TaskClassifST:RSF_ar.train1&gt; (2763 x 6)</span></span>
 <span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="do">## * Target: RealDets</span></span>
 <span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="do">## * Properties: twoclass</span></span>
 <span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="do">## * Features (5):</span></span>
 <span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="do">##   - dbl (5): cov2020, hw2020, num2020, sdcov2020, tt2020</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>task_trout.test <span class="ot">&lt;-</span> TaskClassif<span class="sc">$</span><span class="fu">new</span>(</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">'RSF_ar.test'</span>, <span class="at">backend =</span> RSF_ar.test, <span class="at">target =</span> <span class="st">"RealDets"</span>,</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">positive =</span> <span class="st">"1"</span></span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Make learner.</span></span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>learner <span class="ot">&lt;-</span><span class="fu">lrn</span>(</span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">"classif.ranger"</span>,</span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">predict_type =</span> <span class="st">"prob"</span>,</span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">mtry  =</span> <span class="fu">to_tune</span>(<span class="dv">1</span>, <span class="fu">ncol</span>(RSF_ar.train) <span class="sc">-</span> <span class="dv">4</span>),</span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">sample.fraction =</span> <span class="fu">to_tune</span>(<span class="fl">0.2</span>, <span class="fl">0.9</span>),</span>
-<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">min.node.size =</span> <span class="fu">to_tune</span>(<span class="dv">1</span>,<span class="dv">10</span>),</span>
-<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">importance =</span> <span class="st">'impurity'</span></span>
-<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="co">#tune hyperparameters</span></span>
-<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>instance <span class="ot">=</span> <span class="fu">ti</span>(</span>
-<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">task =</span> task_trout.train,</span>
-<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">learner =</span> learner,</span>
-<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>  <span class="at">resampling =</span> <span class="fu">rsmp</span>(<span class="st">"cv"</span>, <span class="at">folds =</span> <span class="dv">5</span>),</span>
-<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>  <span class="at">measures =</span> <span class="fu">msr</span>(<span class="st">"classif.ce"</span>),</span>
-<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">terminator =</span> <span class="fu">trm</span>(<span class="st">"none"</span>)</span>
-<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>tuner <span class="ot">=</span> mlr3tuning<span class="sc">::</span><span class="fu">tnr</span>(<span class="st">"grid_search"</span>, <span class="at">resolution =</span> <span class="dv">2</span>, <span class="at">batch_size =</span> <span class="dv">2</span>)</span>
-<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>tuner<span class="sc">$</span><span class="fu">optimize</span>(instance) <span class="co"># Takes ~ 4 minutes on my relatively fast computer</span></span>
-<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:54.553] [bbotk] Starting to optimize 3 parameter(s) with '&lt;OptimizerBatchGridSearch&gt;' and '&lt;TerminatorNone&gt;'</span></span>
-<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:54.592] [bbotk] Evaluating 2 configuration(s)</span></span>
-<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:54.620] [mlr3] Running benchmark with 10 resampling iterations</span></span>
-<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:54.651] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:55.290] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:56.069] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:56.737] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:57.376] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:58.034] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:58.346] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:58.677] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.009] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.311] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.659] [mlr3] Finished benchmark</span></span>
-<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.723] [bbotk] Result of batch 1:</span></span>
-<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.728] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
-<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.728] [bbotk]              1    2             0.9 0.09446956        0      0             3.32</span></span>
-<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.728] [bbotk]             10    1             0.2 0.10207432        0      0             1.54</span></span>
-<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.728] [bbotk]                                 uhash</span></span>
-<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.728] [bbotk]  38ed7724-b29d-4fe8-bc2c-bcfb73fd6750</span></span>
-<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.728] [bbotk]  ec1d0a80-80d8-49bd-90e3-def17f6ec3dd</span></span>
-<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.731] [bbotk] Evaluating 2 configuration(s)</span></span>
-<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.740] [mlr3] Running benchmark with 10 resampling iterations</span></span>
-<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:38:59.747] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:00.249] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:00.708] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:01.218] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:01.690] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:02.151] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:02.726] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:03.281] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:03.822] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.401] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.880] [mlr3] Finished benchmark</span></span>
-<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.931] [bbotk] Result of batch 2:</span></span>
-<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.933] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
-<span id="cb13-76"><a href="#cb13-76" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.933] [bbotk]             10    1             0.9 0.09592342        0      0             2.35</span></span>
-<span id="cb13-77"><a href="#cb13-77" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.933] [bbotk]             10    2             0.9 0.09447480        0      0             2.68</span></span>
-<span id="cb13-78"><a href="#cb13-78" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.933] [bbotk]                                 uhash</span></span>
-<span id="cb13-79"><a href="#cb13-79" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.933] [bbotk]  dfc6ae47-3d16-43ba-852e-dcaf28081714</span></span>
-<span id="cb13-80"><a href="#cb13-80" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.933] [bbotk]  82570920-7e28-4533-b652-d9d2dd054503</span></span>
-<span id="cb13-81"><a href="#cb13-81" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.936] [bbotk] Evaluating 2 configuration(s)</span></span>
-<span id="cb13-82"><a href="#cb13-82" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.945] [mlr3] Running benchmark with 10 resampling iterations</span></span>
-<span id="cb13-83"><a href="#cb13-83" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:04.951] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-84"><a href="#cb13-84" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:05.291] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-85"><a href="#cb13-85" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:05.638] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-86"><a href="#cb13-86" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:06.014] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-87"><a href="#cb13-87" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:06.394] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-88"><a href="#cb13-88" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:06.767] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-89"><a href="#cb13-89" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:07.116] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-90"><a href="#cb13-90" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:07.451] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-91"><a href="#cb13-91" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:07.809] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-92"><a href="#cb13-92" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.196] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-93"><a href="#cb13-93" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.528] [mlr3] Finished benchmark</span></span>
-<span id="cb13-94"><a href="#cb13-94" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.594] [bbotk] Result of batch 3:</span></span>
-<span id="cb13-95"><a href="#cb13-95" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.597] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
-<span id="cb13-96"><a href="#cb13-96" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.597] [bbotk]              1    1             0.2 0.09773371        0      0             1.75</span></span>
-<span id="cb13-97"><a href="#cb13-97" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.597] [bbotk]             10    2             0.2 0.10460990        0      0             1.69</span></span>
-<span id="cb13-98"><a href="#cb13-98" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.597] [bbotk]                                 uhash</span></span>
-<span id="cb13-99"><a href="#cb13-99" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.597] [bbotk]  ba2ccf21-7934-4835-8dbe-35cf5994d995</span></span>
-<span id="cb13-100"><a href="#cb13-100" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.597] [bbotk]  73d75cbe-779d-497d-9f86-0fee3d697674</span></span>
-<span id="cb13-101"><a href="#cb13-101" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.600] [bbotk] Evaluating 2 configuration(s)</span></span>
-<span id="cb13-102"><a href="#cb13-102" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.607] [mlr3] Running benchmark with 10 resampling iterations</span></span>
-<span id="cb13-103"><a href="#cb13-103" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:08.613] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-104"><a href="#cb13-104" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:09.122] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-105"><a href="#cb13-105" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:09.693] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-106"><a href="#cb13-106" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:10.251] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-107"><a href="#cb13-107" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:11.015] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-108"><a href="#cb13-108" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:11.922] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 1/5)</span></span>
-<span id="cb13-109"><a href="#cb13-109" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:12.340] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 2/5)</span></span>
-<span id="cb13-110"><a href="#cb13-110" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:12.760] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 3/5)</span></span>
-<span id="cb13-111"><a href="#cb13-111" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:13.168] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 4/5)</span></span>
-<span id="cb13-112"><a href="#cb13-112" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:13.552] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train' (iter 5/5)</span></span>
-<span id="cb13-113"><a href="#cb13-113" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:13.949] [mlr3] Finished benchmark</span></span>
-<span id="cb13-114"><a href="#cb13-114" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.003] [bbotk] Result of batch 4:</span></span>
-<span id="cb13-115"><a href="#cb13-115" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.007] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
-<span id="cb13-116"><a href="#cb13-116" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.007] [bbotk]              1    1             0.9 0.09193660        0      0             3.24</span></span>
-<span id="cb13-117"><a href="#cb13-117" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.007] [bbotk]              1    2             0.2 0.09990434        0      0             1.96</span></span>
-<span id="cb13-118"><a href="#cb13-118" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.007] [bbotk]                                 uhash</span></span>
-<span id="cb13-119"><a href="#cb13-119" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.007] [bbotk]  3ac37499-e34c-47b1-b3f3-67a15af49b37</span></span>
-<span id="cb13-120"><a href="#cb13-120" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.007] [bbotk]  9433b101-b782-4c9d-a35f-1b39e5ae9314</span></span>
-<span id="cb13-121"><a href="#cb13-121" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.036] [bbotk] Finished optimizing after 8 evaluation(s)</span></span>
-<span id="cb13-122"><a href="#cb13-122" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.037] [bbotk] Result:</span></span>
-<span id="cb13-123"><a href="#cb13-123" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.040] [bbotk]  min.node.size  mtry sample.fraction learner_param_vals  x_domain classif.ce</span></span>
-<span id="cb13-124"><a href="#cb13-124" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.040] [bbotk]          &lt;int&gt; &lt;int&gt;           &lt;num&gt;             &lt;list&gt;    &lt;list&gt;      &lt;num&gt;</span></span>
-<span id="cb13-125"><a href="#cb13-125" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [13:39:14.040] [bbotk]              1     1             0.9          &lt;list[5]&gt; &lt;list[3]&gt;  0.0919366</span></span>
-<span id="cb13-126"><a href="#cb13-126" aria-hidden="true" tabindex="-1"></a><span class="do">##    min.node.size  mtry sample.fraction learner_param_vals  x_domain classif.ce</span></span>
-<span id="cb13-127"><a href="#cb13-127" aria-hidden="true" tabindex="-1"></a><span class="do">##            &lt;int&gt; &lt;int&gt;           &lt;num&gt;             &lt;list&gt;    &lt;list&gt;      &lt;num&gt;</span></span>
-<span id="cb13-128"><a href="#cb13-128" aria-hidden="true" tabindex="-1"></a><span class="do">## 1:             1     1             0.9          &lt;list[5]&gt; &lt;list[3]&gt;  0.0919366</span></span>
-<span id="cb13-129"><a href="#cb13-129" aria-hidden="true" tabindex="-1"></a><span class="fu">beep</span>(<span class="dv">1</span>)</span>
-<span id="cb13-130"><a href="#cb13-130" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-131"><a href="#cb13-131" aria-hidden="true" tabindex="-1"></a><span class="co">#store tuned hyperparameters in learner</span></span>
-<span id="cb13-132"><a href="#cb13-132" aria-hidden="true" tabindex="-1"></a>learner<span class="sc">$</span>param_set<span class="sc">$</span>values <span class="ot">&lt;-</span> instance<span class="sc">$</span>result_learner_param_vals</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="do">## * Coordinates:</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="do">##              X       Y</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="do">##          &lt;num&gt;   &lt;num&gt;</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="do">##    1: 521005.5 2779492</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="do">##    2: 520997.9 2778977</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="do">##    3: 518816.5 2779197</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="do">##    4: 518920.6 2778294</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="do">##    5: 518387.8 2777374</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="do">##   ---                 </span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="do">## 2759: 519425.4 2778406</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="do">## 2760: 520628.2 2777985</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="do">## 2761: 518397.9 2779850</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="do">## 2762: 518189.1 2779674</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="do">## 2763: 519432.4 2778212</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>task_trout.test <span class="ot">&lt;-</span> <span class="fu">as_task_classif_st</span>(</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> RSF_ar.test1, <span class="at">target =</span> <span class="st">"RealDets"</span>,</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">positive =</span> <span class="st">"1"</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Make learner.</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>learner <span class="ot">&lt;-</span><span class="fu">lrn</span>(</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>  <span class="st">"classif.ranger"</span>,</span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">predict_type =</span> <span class="st">"prob"</span>,</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">mtry  =</span> <span class="fu">to_tune</span>(<span class="dv">1</span>, <span class="fu">ncol</span>(RSF_ar.train) <span class="sc">-</span> <span class="dv">4</span>),</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">sample.fraction =</span> <span class="fu">to_tune</span>(<span class="fl">0.2</span>, <span class="fl">0.9</span>),</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">min.node.size =</span> <span class="fu">to_tune</span>(<span class="dv">1</span>,<span class="dv">10</span>),</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>  <span class="at">importance =</span> <span class="st">'impurity'</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a><span class="co">#tune hyperparameters</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>instance <span class="ot">=</span> <span class="fu">ti</span>(</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>  <span class="at">task =</span> task_trout.train,</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>  <span class="at">learner =</span> learner,</span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>  <span class="at">resampling =</span> <span class="fu">rsmp</span>(<span class="st">"cv"</span>, <span class="at">folds =</span> <span class="dv">5</span>),</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>  <span class="at">measures =</span> <span class="fu">msr</span>(<span class="st">"classif.ce"</span>),</span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>  <span class="at">terminator =</span> <span class="fu">trm</span>(<span class="st">"none"</span>)</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>tuner <span class="ot">=</span> mlr3tuning<span class="sc">::</span><span class="fu">tnr</span>(<span class="st">"grid_search"</span>, <span class="at">resolution =</span> <span class="dv">2</span>, <span class="at">batch_size =</span> <span class="dv">2</span>)</span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a>tuner<span class="sc">$</span><span class="fu">optimize</span>(instance) <span class="co"># Takes ~ 4 minutes on my relatively fast computer</span></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:34.132] [bbotk] Starting to optimize 3 parameter(s) with '&lt;OptimizerBatchGridSearch&gt;' and '&lt;TerminatorNone&gt;'</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:34.179] [bbotk] Evaluating 2 configuration(s)</span></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:34.197] [mlr3] Running benchmark with 10 resampling iterations</span></span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:34.230] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:35.095] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:35.895] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:36.681] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:37.492] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:38.283] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:38.586] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:39.213] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:39.535] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:39.860] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.184] [mlr3] Finished benchmark</span></span>
+<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.234] [bbotk] Result of batch 1:</span></span>
+<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.237] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
+<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.237] [bbotk]              1    4             0.9 0.09265862        0      0             4.01</span></span>
+<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.237] [bbotk]             10    1             0.2 0.10207432        0      0             1.55</span></span>
+<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.237] [bbotk]                                 uhash</span></span>
+<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.237] [bbotk]  22f9b660-351e-454c-a266-8e61173f78a9</span></span>
+<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.237] [bbotk]  b76571b2-09ab-4660-91cf-a7c6d4e8f60f</span></span>
+<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.243] [bbotk] Evaluating 2 configuration(s)</span></span>
+<span id="cb13-76"><a href="#cb13-76" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.252] [mlr3] Running benchmark with 10 resampling iterations</span></span>
+<span id="cb13-77"><a href="#cb13-77" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.258] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-78"><a href="#cb13-78" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:40.743] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-79"><a href="#cb13-79" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:41.229] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-80"><a href="#cb13-80" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:41.728] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-81"><a href="#cb13-81" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:42.203] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-82"><a href="#cb13-82" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:42.664] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-83"><a href="#cb13-83" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:43.404] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-84"><a href="#cb13-84" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:44.144] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-85"><a href="#cb13-85" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:44.876] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-86"><a href="#cb13-86" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:45.602] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-87"><a href="#cb13-87" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.309] [mlr3] Finished benchmark</span></span>
+<span id="cb13-88"><a href="#cb13-88" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.367] [bbotk] Result of batch 2:</span></span>
+<span id="cb13-89"><a href="#cb13-89" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.370] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
+<span id="cb13-90"><a href="#cb13-90" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.370] [bbotk]             10    1             0.9 0.09592342        0      0             2.38</span></span>
+<span id="cb13-91"><a href="#cb13-91" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.370] [bbotk]             10    4             0.9 0.09411314        0      0             3.59</span></span>
+<span id="cb13-92"><a href="#cb13-92" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.370] [bbotk]                                 uhash</span></span>
+<span id="cb13-93"><a href="#cb13-93" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.370] [bbotk]  afe15533-09e0-4f62-8d0b-747d7414b48a</span></span>
+<span id="cb13-94"><a href="#cb13-94" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.370] [bbotk]  d1ac5fdd-44c5-4187-b57c-3328bacd3d36</span></span>
+<span id="cb13-95"><a href="#cb13-95" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.375] [bbotk] Evaluating 2 configuration(s)</span></span>
+<span id="cb13-96"><a href="#cb13-96" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.393] [mlr3] Running benchmark with 10 resampling iterations</span></span>
+<span id="cb13-97"><a href="#cb13-97" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.398] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-98"><a href="#cb13-98" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:46.753] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-99"><a href="#cb13-99" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:47.114] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-100"><a href="#cb13-100" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:47.466] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-101"><a href="#cb13-101" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:47.826] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-102"><a href="#cb13-102" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:48.194] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-103"><a href="#cb13-103" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:48.598] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-104"><a href="#cb13-104" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:49.007] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-105"><a href="#cb13-105" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:49.407] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-106"><a href="#cb13-106" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:49.799] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-107"><a href="#cb13-107" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.237] [mlr3] Finished benchmark</span></span>
+<span id="cb13-108"><a href="#cb13-108" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.294] [bbotk] Result of batch 3:</span></span>
+<span id="cb13-109"><a href="#cb13-109" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.297] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
+<span id="cb13-110"><a href="#cb13-110" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.297] [bbotk]              1    1             0.2 0.09773371        0      0             1.74</span></span>
+<span id="cb13-111"><a href="#cb13-111" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.297] [bbotk]             10    4             0.2 0.10569751        0      0             1.99</span></span>
+<span id="cb13-112"><a href="#cb13-112" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.297] [bbotk]                                 uhash</span></span>
+<span id="cb13-113"><a href="#cb13-113" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.297] [bbotk]  20c1a644-1d07-4316-a917-8ecf39712420</span></span>
+<span id="cb13-114"><a href="#cb13-114" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.297] [bbotk]  7227eba1-4a68-49c9-80d5-69dc5e08e7dd</span></span>
+<span id="cb13-115"><a href="#cb13-115" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.300] [bbotk] Evaluating 2 configuration(s)</span></span>
+<span id="cb13-116"><a href="#cb13-116" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.311] [mlr3] Running benchmark with 10 resampling iterations</span></span>
+<span id="cb13-117"><a href="#cb13-117" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.319] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-118"><a href="#cb13-118" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:50.938] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-119"><a href="#cb13-119" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:51.610] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-120"><a href="#cb13-120" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:52.177] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-121"><a href="#cb13-121" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:52.729] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-122"><a href="#cb13-122" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:53.247] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 1/5)</span></span>
+<span id="cb13-123"><a href="#cb13-123" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:53.695] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 2/5)</span></span>
+<span id="cb13-124"><a href="#cb13-124" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:54.131] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 3/5)</span></span>
+<span id="cb13-125"><a href="#cb13-125" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:54.565] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 4/5)</span></span>
+<span id="cb13-126"><a href="#cb13-126" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:54.991] [mlr3] Applying learner 'classif.ranger' on task 'RSF_ar.train1' (iter 5/5)</span></span>
+<span id="cb13-127"><a href="#cb13-127" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.449] [mlr3] Finished benchmark</span></span>
+<span id="cb13-128"><a href="#cb13-128" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.501] [bbotk] Result of batch 4:</span></span>
+<span id="cb13-129"><a href="#cb13-129" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.504] [bbotk]  min.node.size mtry sample.fraction classif.ce warnings errors runtime_learners</span></span>
+<span id="cb13-130"><a href="#cb13-130" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.504] [bbotk]              1    1             0.9 0.09193660        0      0             2.86</span></span>
+<span id="cb13-131"><a href="#cb13-131" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.504] [bbotk]              1    4             0.2 0.09845965        0      0             2.15</span></span>
+<span id="cb13-132"><a href="#cb13-132" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.504] [bbotk]                                 uhash</span></span>
+<span id="cb13-133"><a href="#cb13-133" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.504] [bbotk]  e0038ab3-4dc5-4c7f-9d2a-301c99cb3837</span></span>
+<span id="cb13-134"><a href="#cb13-134" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.504] [bbotk]  141b77dd-4ca1-430a-aaa7-a624cb46f592</span></span>
+<span id="cb13-135"><a href="#cb13-135" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.525] [bbotk] Finished optimizing after 8 evaluation(s)</span></span>
+<span id="cb13-136"><a href="#cb13-136" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.526] [bbotk] Result:</span></span>
+<span id="cb13-137"><a href="#cb13-137" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.528] [bbotk]  min.node.size  mtry sample.fraction learner_param_vals  x_domain classif.ce</span></span>
+<span id="cb13-138"><a href="#cb13-138" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.528] [bbotk]          &lt;int&gt; &lt;int&gt;           &lt;num&gt;             &lt;list&gt;    &lt;list&gt;      &lt;num&gt;</span></span>
+<span id="cb13-139"><a href="#cb13-139" aria-hidden="true" tabindex="-1"></a><span class="do">## INFO  [09:43:55.528] [bbotk]              1     1             0.9          &lt;list[5]&gt; &lt;list[3]&gt;  0.0919366</span></span>
+<span id="cb13-140"><a href="#cb13-140" aria-hidden="true" tabindex="-1"></a><span class="do">##    min.node.size  mtry sample.fraction learner_param_vals  x_domain classif.ce</span></span>
+<span id="cb13-141"><a href="#cb13-141" aria-hidden="true" tabindex="-1"></a><span class="do">##            &lt;int&gt; &lt;int&gt;           &lt;num&gt;             &lt;list&gt;    &lt;list&gt;      &lt;num&gt;</span></span>
+<span id="cb13-142"><a href="#cb13-142" aria-hidden="true" tabindex="-1"></a><span class="do">## 1:             1     1             0.9          &lt;list[5]&gt; &lt;list[3]&gt;  0.0919366</span></span>
+<span id="cb13-143"><a href="#cb13-143" aria-hidden="true" tabindex="-1"></a><span class="fu">beep</span>(<span class="dv">1</span>)</span>
+<span id="cb13-144"><a href="#cb13-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-145"><a href="#cb13-145" aria-hidden="true" tabindex="-1"></a><span class="co">#store tuned hyperparameters in learner</span></span>
+<span id="cb13-146"><a href="#cb13-146" aria-hidden="true" tabindex="-1"></a>learner<span class="sc">$</span>param_set<span class="sc">$</span>values <span class="ot">&lt;-</span> instance<span class="sc">$</span>result_learner_param_vals</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now we can train and view the model!</p>
 <div class="cell">
