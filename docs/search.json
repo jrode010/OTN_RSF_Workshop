@@ -179,7 +179,7 @@
     "href": "GAM.html#run-gam-model",
     "title": "RSF with GAMs",
     "section": "Run GAM model",
-    "text": "Run GAM model\nWe will just use all of the data to run the GAM model in this example. GAMS do well with spatial and temporal autocorrelation!\n\n# Fit a GAM model with spatial and temporal autocorrelation (x, y, and Date). Stay tuned for \ngam_model &lt;- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) +\n                   s(Transmitter, bs = \"re\") + # ID\n                   s(x, y, bs = \"gp\"), # Spatial component\n                 family = binomial, data = datgam, method = \"REML\")"
+    "text": "Run GAM model\nWe will just use all of the data to run the GAM model in this example. GAMS do well with spatial and temporal autocorrelation!\n\n# Fit a GAM model with spatial and temporal autocorrelation (x, y, and Date). Stay tuned for \ngam_model &lt;- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) + s(sdcov2020, k = 4) + s(num2020, k = 4) +\n                   s(Transmitter, bs = \"re\") + # ID\n                   s(x, y, bs = \"gp\"), # Spatial component\n                 family = binomial, data = datgam, method = \"REML\")"
   },
   {
     "objectID": "GAM.html#summarizing-the-model",

@@ -41,7 +41,7 @@ We will just use all of the data to run the GAM model in this example. GAMS do w
 
 ```{r}
 # Fit a GAM model with spatial and temporal autocorrelation (x, y, and Date). Stay tuned for 
-gam_model <- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) +
+gam_model <- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) + s(sdcov2020, k = 4) + s(num2020, k = 4) +
                    s(Transmitter, bs = "re") + # ID
                    s(x, y, bs = "gp"), # Spatial component
                  family = binomial, data = datgam, method = "REML")
