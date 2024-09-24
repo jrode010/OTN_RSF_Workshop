@@ -83,7 +83,7 @@ head(dt)
 unique(dt$Station.Name)
 head(stations)
 dat <- merge(dt, stations, by="Station.Name")
-dat <- dat %>% select(-c(X, Receiver.x, Receiver.y, SAV))
+dat <- dat %>% dplyr::select(-c(X, Receiver.x, Receiver.y, SAV))
 str(dat)
 
 #Ok, we have the acoustic data merged with station data so we have locations. Let's calculate Center of Activities (COAs)
@@ -95,14 +95,15 @@ dat$DateTime <- cut(dat$Date_time, breaks = ex) #cut up the data to calculate CO
 str(dat)
 
 #Calculation of COAs
+set.seed(19)
 coadat <- dat %>% group_by(DateTime, Transmitter) %>% mutate(n = n()) %>% filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
   group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
-  select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
+  dplyr::select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
 head(coadat)
 
 #So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs
 coadat1 <- coadat %>% as.data.frame() %>% group_by(Transmitter) %>%
-  mutate(count = n()) %>% filter(count >= 50) %>% select(-c(n, count)) %>% distinct()
+  mutate(count = n()) %>% filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% distinct()
 str(coadat1)
 
 #First, let's plot this in ggmap to get our bearings LG
@@ -142,7 +143,7 @@ ggplot() +
 #this is now projected data, so revert it back!
 coor <- as.data.frame(do.call('rbind', sfdat$geometry)) %>% rename(x = V1, y = V2)
 
-coadat1 <- cbind(coadat1, coor) %>% select(-c(lat.coa, long.coa))
+coadat1 <- cbind(coadat1, coor) %>% dplyr::select(-c(lat.coa, long.coa))
 
 #As you can see, the data is limited to our grid of receivers. This is a downside to acoustic telemetry vs positioning solvers
 
@@ -291,9 +292,9 @@ coadat1 <- coadat1 %>% filter(TYD %in% RandomPts$TYD)
 #make dataframes have same columns
 head(RandomPts)
 head(coadat1)
-coadat1 <- coadat1 %>% select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
+coadat1 <- coadat1 %>% dplyr::select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
 head(coadat1)
-RandomPts <- RandomPts %>% select(-count)
+RandomPts <- RandomPts %>% dplyr::select(-count)
 head(RandomPts)
 
 alldat <- rbind(coadat1, RandomPts)
@@ -432,18 +433,21 @@ imp_trout <- FeatureImp$new(predictor_trout, loss = "ce") # Calculate importance
 imp_df_trout <- imp_trout$results 
 imp_trout$plot()
 
-#so halodule cover is the most important variable. Let's investigate how it impacts the presence of trout
+#so Thalassia cover is the most important variable. Let's investigate how it impacts the presence of trout
 
+effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
+effect_tt$plot()
+
+#Higher Thalassia, lower presence predicted. What about Halodule?
 effect_hw <- FeatureEffect$new(predictor_trout, feature = c('hw2020'), method = 'pdp')
 effect_hw$plot()
 
 
-#we can see as halodule cover goes up, probability of presence goes up. What about thalassia?
-effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
-effect_tt$plot()
+#we can see as halodule cover goes up, probability of presence goes up. Number of species?
+effect_num <- FeatureEffect$new(predictor_trout, feature = c('num2020'), method = 'pdp')
+effect_num$plot()
 
-
-#opposite effect. Makes sense. How about cover?
+#Low and high polynomial. Interesting. High number makes sense as it is often related to Halodule beds. How about cover?
 effect_cov <- FeatureEffect$new(predictor_trout, feature = c('cov2020'), method = 'pdp')
 effect_cov$plot()
 
@@ -451,10 +455,7 @@ effect_cov$plot()
 effect_sdcov <- FeatureEffect$new(predictor_trout, feature = c('sdcov2020'), method = 'pdp')
 effect_sdcov$plot()
 
-#Number of species?
-effect_num <- FeatureEffect$new(predictor_trout, feature = c('num2020'), method = 'pdp')
-effect_sdcov$plot()
-
+#Higher is better. More complexity!
 
 #let's now create a spatial representation of presence/absence from the model!
 plot(rastdat)
@@ -520,9 +521,9 @@ glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + num2020 + s
                          data = RSF_ar.train, family = binomial)
 
 # Should we consider a polynomial?
-cowplot::plot_grid(effect_hw$plot(), effect_tt$plot(), effect_cov$plot(), labels = "auto", ncol = 3)
+cowplot::plot_grid(effect_hw$plot(), effect_tt$plot(), effect_cov$plot(), effect_sdcov$plot(), effect_num$plot(), labels = "auto", ncol = 5)
 
-glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + num2020 + sdcov2020 +(1 | Transmitter),
+glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + poly(num2020,2) + sdcov2020 +(1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
 AICc(glmmTMB_model_lin, glmmTMB_model_poly)
