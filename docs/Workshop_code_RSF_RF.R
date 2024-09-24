@@ -50,7 +50,7 @@ library(ggmap) #plotting onto map
 library(beepr) #beeps when code is done running
 
 #Load in data
-setwd('~/Desktop/Data/') #set your working directory
+setwd('~/Desktop/OTN_RSF_Workshop-main/') #set your working directory
 dt <- read.csv('data/Acoustic_data.csv') #Acoustic data
 tags <- read.csv('data/Tag_Metadata.csv') #tag metadata
 stations <- read.csv('data/Stations.csv') #station metadata
@@ -112,7 +112,7 @@ str(coadat1)
 # FLmap_zoom_out <- get_googlemap(center = c(lon=mean(coadat1$long.coa), lat=mean(coadat1$lat.coa)),
 #                        zoom = 6,
 #                        maptype = c("satellite"))
-load("~/Desktop/Data/FLmap_zoom_out.RData")
+load("data/FLmap_zoom_out.RData")
 
 ggmap(FLmap_zoom_out, extent='normal') + 
   geom_point(data = coadat1,
@@ -121,7 +121,7 @@ ggmap(FLmap_zoom_out, extent='normal') +
 # FLmap_zoom_in <- get_googlemap(center = c(lon=mean(coadat1$long.coa), lat=mean(coadat1$lat.coa)),
 #                                 zoom = 13,
 #                                 maptype = c("satellite"))
-load("~/Desktop/Data/FLmap_zoom_in.RData")
+load("data/FLmap_zoom_in.RData")
 
 ggmap(FLmap_zoom_in, extent='normal') + 
   geom_point(data = coadat1,
@@ -239,7 +239,7 @@ COA_list <- coadat1 %>% as.data.frame() %>%
   # Make into list based on TYD.
   group_split(TYD) 
 
-extent <- st_read('trainr2021_mask.shp')
+extent <- st_read('data/trainr2021_mask.shp')
 #create list to put results into
 rand_list <- list()
 
@@ -298,19 +298,19 @@ head(RandomPts)
 
 alldat <- rbind(coadat1, RandomPts)
 head(alldat)
-saveRDS(alldat, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/alldat.RDS')
+
 #now we have our full dataset with presences and pseudo-absences!!! 
 #Now we can extract environmental variables to model habitat selection
 #Load in rasters - all rasters are interpolated maps from either surveys performed by Rodemann et al. or by FWRI as part of the Fisheries Habitat Assessment Program (FHAP) in Florida Bay
-cov_2020 <- rast('cov2020.tif') #percent SAV cover
-sdcov_2020 <- rast('sdcov2020.tif') #standard deviation of cover
-numsp_2020 <- rast('num2020.tif') #number of SAV species
-hw_2020 <- rast('hw2020.tif') #Halodule wrightii cover
-tt_2020 <- rast('tt2020.tif') #Thalassia testudinum cover
+cov_2020 <- rast('data/cov2020.tif') #percent SAV cover
+sdcov_2020 <- rast('data/sdcov2020.tif') #standard deviation of cover
+numsp_2020 <- rast('data/num2020.tif') #number of SAV species
+hw_2020 <- rast('data/hw2020.tif') #Halodule wrightii cover
+tt_2020 <- rast('data/tt2020.tif') #Thalassia testudinum cover
 
 #crop all rasters to same extent
 #load in shapefile for extent
-extent <- st_read('trainr2021_mask.shp')
+extent <- st_read('data/trainr2021_mask.shp')
 
 cov2020 <- terra::crop(cov_2020, extent)
 sdcov2020 <- terra::crop(sdcov_2020, extent)
@@ -336,17 +336,17 @@ head(datrf)
 #let's get into modelling this with rf!
 
 #need to remove all columns that we are not using for now
-datrf <- datrf %>% select(-c(Transmitter, period, periody, TYD))
+datrf1 <- datrf %>% dplyr::select(-c(Transmitter, period, periody, TYD))
 
 #Set seed for replications
 set.seed(19)
 
-datrf$RealDets <- as.factor(datrf$RealDets)
+datrf1$RealDets <- as.factor(datrf$RealDets)
 
 # Randomly select 70% of the data frame for the training dataset
-RSF_ar.train <- datrf[sample(1:nrow(datrf), nrow(datrf) * 0.7, replace = FALSE), ]
+RSF_ar.train <- datrf1[sample(1:nrow(datrf), nrow(datrf) * 0.7, replace = FALSE), ]
 # Remainder (i.e., 30%) becomes the test dataset.
-RSF_ar.test <- datrf[!(datrf$ID %in% RSF_ar.train$ID), ] 
+RSF_ar.test <- datrf1[!(datrf1$ID %in% RSF_ar.train$ID), ] 
 
 head(RSF_ar.test)
 
@@ -362,6 +362,8 @@ RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>%
 RSF_ar.test1 <- RSF_ar.test %>% 
   st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
   st_set_crs(2958)
+
+head(RSF_ar.train1)
 
 # Set tasks for training and test datasets.
 task_trout.train <- as_task_classif_st(
@@ -419,19 +421,13 @@ pred_test <- learner$predict(task_trout.test)
 pred_test$confusion
 pred_test$score(measures)
 
-#Let's look at the importance rank of each variable!
-var_fil <- flt('importance', learner = learner)
-var_fil$calculate(task_trout.train)
 
-head(as.data.table(var_fil))
-
-#importance with iml package
+#importance with iml package - this is looking at the most influencial predictors in the model
 x_trout <- RSF_ar.train %>% dplyr::select(-RealDets) 
 # Create "Predictor" object to interpret findings via the iml package.
 predictor_trout <- Predictor$new(learner, data = x_trout, y = RSF_ar.train$RealDets) 
 
 imp_trout <- FeatureImp$new(predictor_trout, loss = "ce") # Calculate importance.
-warnings()
 
 imp_df_trout <- imp_trout$results 
 imp_trout$plot()
@@ -451,15 +447,20 @@ effect_tt$plot()
 effect_cov <- FeatureEffect$new(predictor_trout, feature = c('cov2020'), method = 'pdp')
 effect_cov$plot()
 
-#low cover and high cover. Makes sense with low cover as it is often associated with Halodule beds. High cover is more interesting
+#polynomial. Makes sense with low cover as it is often associated with Halodule beds. High cover is more interesting. Sd cover?
+effect_sdcov <- FeatureEffect$new(predictor_trout, feature = c('sdcov2020'), method = 'pdp')
+effect_sdcov$plot()
+
+#Number of species?
+effect_num <- FeatureEffect$new(predictor_trout, feature = c('num2020'), method = 'pdp')
+effect_sdcov$plot()
+
 
 #let's now create a spatial representation of presence/absence from the model!
 plot(rastdat)
 
 #need to do it kind of manually because mlr3spatial does not support probability surfaces
-# newdata = as.data.table(values(rastdat)) %>% drop_na() # LG HAD ISSUES WITH THIS
-
-newdata <- as.data.table(as.data.frame(rastdat, na.rm = T))# BETTER TO USE THIS? LG, I don't think u want to drop the NAs as it wont match the raster. Still not working for me, so had to drop but leads to strange predictions
+newdata <- as.data.table(as.data.frame(rastdat)) %>% mutate(tt2020 = ifelse(is.na(tt2020)==T, 0, tt2020)) %>% mutate(hw2020=ifelse(is.na(hw2020)==T, 0, hw2020))
 
 pred = learner$predict_newdata(newdata)
 pred$prob
@@ -515,13 +516,13 @@ table(RSF_ar.train$Transmitter)
 table(RSF_ar.test$Transmitter)
 
 # Fit a GLMM with glmmTMB
-glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + (1 | Transmitter),
+glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + num2020 + sdcov2020 + (1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
 # Should we consider a polynomial?
 cowplot::plot_grid(effect_hw$plot(), effect_tt$plot(), effect_cov$plot(), labels = "auto", ncol = 3)
 
-glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + (1 | Transmitter),
+glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + num2020 + sdcov2020 +(1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
 AICc(glmmTMB_model_lin, glmmTMB_model_poly)
@@ -537,6 +538,8 @@ r2(glmmTMB_model)
 effects_hw2020 <- ggpredict(glmmTMB_model, terms = "hw2020 [all]")
 effects_tt2020 <- ggpredict(glmmTMB_model, terms = "tt2020 [all]")
 effects_cov2020 <- ggpredict(glmmTMB_model, terms = "cov2020 [all]")
+effects_sdcov2020 <- ggpredict(glmmTMB_model, terms = "sdcov2020 [all]")
+effects_num2020 <- ggpredict(glmmTMB_model, terms = "num2020 [all]")
 
 # Plot marginal effects for each covariate
 hh_marg <- ggplot(effects_hw2020, aes(x = x, y = predicted)) +
@@ -560,8 +563,22 @@ cov_marg <- ggplot(effects_cov2020, aes(x = x, y = predicted)) +
   labs(x = "Percent SAV Cover", y = "Predicted Probability") +
   theme_minimal()
 
-# Combine the three plots into one using cowplot
-cowplot::plot_grid(hh_marg, tt_marg, cov_marg, labels = "auto", ncol = 3)
+sdcov_marg <- ggplot(effects_sdcov2020, aes(x = x, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Standard Deviation in SAV Cover", y = "Predicted Probability") +
+  theme_minimal()
+
+num_marg <- ggplot(effects_num2020, aes(x = x, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Number of Species", y = "Predicted Probability") +
+  theme_minimal()
+
+# Combine the five plots into one using cowplot
+cowplot::plot_grid(hh_marg, tt_marg, cov_marg, sdcov_marg, num_marg, labels = "auto", ncol = 5)
 
 
 # Accuracy of the model on the training data
