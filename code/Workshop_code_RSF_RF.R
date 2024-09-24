@@ -50,7 +50,7 @@ library(ggmap) #plotting onto map
 library(beepr) #beeps when code is done running
 
 #Load in data
-setwd('~/Desktop/Data/') #set your working directory
+setwd('~/Desktop/OTN_RSF_Workshop-main/') #set your working directory
 dt <- read.csv('data/Acoustic_data.csv') #Acoustic data
 tags <- read.csv('data/Tag_Metadata.csv') #tag metadata
 stations <- read.csv('data/Stations.csv') #station metadata
@@ -83,7 +83,7 @@ head(dt)
 unique(dt$Station.Name)
 head(stations)
 dat <- merge(dt, stations, by="Station.Name")
-dat <- dat %>% select(-c(X, Receiver.x, Receiver.y, SAV))
+dat <- dat %>% dplyr::select(-c(X, Receiver.x, Receiver.y, SAV))
 str(dat)
 
 #Ok, we have the acoustic data merged with station data so we have locations. Let's calculate Center of Activities (COAs)
@@ -95,14 +95,15 @@ dat$DateTime <- cut(dat$Date_time, breaks = ex) #cut up the data to calculate CO
 str(dat)
 
 #Calculation of COAs
+set.seed(19)
 coadat <- dat %>% group_by(DateTime, Transmitter) %>% mutate(n = n()) %>% filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
   group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
-  select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
+  dplyr::select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
 head(coadat)
 
 #So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs
 coadat1 <- coadat %>% as.data.frame() %>% group_by(Transmitter) %>%
-  mutate(count = n()) %>% filter(count >= 50) %>% select(-c(n, count)) %>% distinct()
+  mutate(count = n()) %>% filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% distinct()
 str(coadat1)
 
 #First, let's plot this in ggmap to get our bearings LG
@@ -112,7 +113,7 @@ str(coadat1)
 # FLmap_zoom_out <- get_googlemap(center = c(lon=mean(coadat1$long.coa), lat=mean(coadat1$lat.coa)),
 #                        zoom = 6,
 #                        maptype = c("satellite"))
-load("~/Desktop/Data/FLmap_zoom_out.RData")
+load("data/FLmap_zoom_out.RData")
 
 ggmap(FLmap_zoom_out, extent='normal') + 
   geom_point(data = coadat1,
@@ -121,7 +122,7 @@ ggmap(FLmap_zoom_out, extent='normal') +
 # FLmap_zoom_in <- get_googlemap(center = c(lon=mean(coadat1$long.coa), lat=mean(coadat1$lat.coa)),
 #                                 zoom = 13,
 #                                 maptype = c("satellite"))
-load("~/Desktop/Data/FLmap_zoom_in.RData")
+load("data/FLmap_zoom_in.RData")
 
 ggmap(FLmap_zoom_in, extent='normal') + 
   geom_point(data = coadat1,
@@ -142,7 +143,7 @@ ggplot() +
 #this is now projected data, so revert it back!
 coor <- as.data.frame(do.call('rbind', sfdat$geometry)) %>% rename(x = V1, y = V2)
 
-coadat1 <- cbind(coadat1, coor) %>% select(-c(lat.coa, long.coa))
+coadat1 <- cbind(coadat1, coor) %>% dplyr::select(-c(lat.coa, long.coa))
 
 #As you can see, the data is limited to our grid of receivers. This is a downside to acoustic telemetry vs positioning solvers
 
@@ -239,7 +240,7 @@ COA_list <- coadat1 %>% as.data.frame() %>%
   # Make into list based on TYD.
   group_split(TYD) 
 
-extent <- st_read('trainr2021_mask.shp')
+extent <- st_read('data/trainr2021_mask.shp')
 #create list to put results into
 rand_list <- list()
 
@@ -291,26 +292,26 @@ coadat1 <- coadat1 %>% filter(TYD %in% RandomPts$TYD)
 #make dataframes have same columns
 head(RandomPts)
 head(coadat1)
-coadat1 <- coadat1 %>% select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
+coadat1 <- coadat1 %>% dplyr::select(-c(DateTime, Date, Time, Year, Month, Day, Hour, Minute, Second))
 head(coadat1)
-RandomPts <- RandomPts %>% select(-count)
+RandomPts <- RandomPts %>% dplyr::select(-count)
 head(RandomPts)
 
 alldat <- rbind(coadat1, RandomPts)
 head(alldat)
-saveRDS(alldat, file = 'C:/Users/jonro/OneDrive/Desktop/RSF_OTN_Workshop/RSF_OTN_Workshop/data/alldat.RDS')
+
 #now we have our full dataset with presences and pseudo-absences!!! 
 #Now we can extract environmental variables to model habitat selection
 #Load in rasters - all rasters are interpolated maps from either surveys performed by Rodemann et al. or by FWRI as part of the Fisheries Habitat Assessment Program (FHAP) in Florida Bay
-cov_2020 <- rast('cov2020.tif') #percent SAV cover
-sdcov_2020 <- rast('sdcov2020.tif') #standard deviation of cover
-numsp_2020 <- rast('num2020.tif') #number of SAV species
-hw_2020 <- rast('hw2020.tif') #Halodule wrightii cover
-tt_2020 <- rast('tt2020.tif') #Thalassia testudinum cover
+cov_2020 <- rast('data/cov2020.tif') #percent SAV cover
+sdcov_2020 <- rast('data/sdcov2020.tif') #standard deviation of cover
+numsp_2020 <- rast('data/num2020.tif') #number of SAV species
+hw_2020 <- rast('data/hw2020.tif') #Halodule wrightii cover
+tt_2020 <- rast('data/tt2020.tif') #Thalassia testudinum cover
 
 #crop all rasters to same extent
 #load in shapefile for extent
-extent <- st_read('trainr2021_mask.shp')
+extent <- st_read('data/trainr2021_mask.shp')
 
 cov2020 <- terra::crop(cov_2020, extent)
 sdcov2020 <- terra::crop(sdcov_2020, extent)
@@ -336,17 +337,17 @@ head(datrf)
 #let's get into modelling this with rf!
 
 #need to remove all columns that we are not using for now
-datrf <- datrf %>% select(-c(Transmitter, period, periody, TYD))
+datrf1 <- datrf %>% dplyr::select(-c(Transmitter, period, periody, TYD))
 
 #Set seed for replications
 set.seed(19)
 
-datrf$RealDets <- as.factor(datrf$RealDets)
+datrf1$RealDets <- as.factor(datrf$RealDets)
 
 # Randomly select 70% of the data frame for the training dataset
-RSF_ar.train <- datrf[sample(1:nrow(datrf), nrow(datrf) * 0.7, replace = FALSE), ]
+RSF_ar.train <- datrf1[sample(1:nrow(datrf), nrow(datrf) * 0.7, replace = FALSE), ]
 # Remainder (i.e., 30%) becomes the test dataset.
-RSF_ar.test <- datrf[!(datrf$ID %in% RSF_ar.train$ID), ] 
+RSF_ar.test <- datrf1[!(datrf1$ID %in% RSF_ar.train$ID), ] 
 
 head(RSF_ar.test)
 
@@ -362,6 +363,8 @@ RSF_ar.train1 <- RSF_ar.train %>% as_tibble() %>%
 RSF_ar.test1 <- RSF_ar.test %>% 
   st_as_sf(coords = c('x', 'y')) %>% #set up the coordinates
   st_set_crs(2958)
+
+head(RSF_ar.train1)
 
 # Set tasks for training and test datasets.
 task_trout.train <- as_task_classif_st(
@@ -419,47 +422,46 @@ pred_test <- learner$predict(task_trout.test)
 pred_test$confusion
 pred_test$score(measures)
 
-#Let's look at the importance rank of each variable!
-var_fil <- flt('importance', learner = learner)
-var_fil$calculate(task_trout.train)
 
-head(as.data.table(var_fil))
-
-#importance with iml package
+#importance with iml package - this is looking at the most influencial predictors in the model
 x_trout <- RSF_ar.train %>% dplyr::select(-RealDets) 
 # Create "Predictor" object to interpret findings via the iml package.
 predictor_trout <- Predictor$new(learner, data = x_trout, y = RSF_ar.train$RealDets) 
 
 imp_trout <- FeatureImp$new(predictor_trout, loss = "ce") # Calculate importance.
-warnings()
 
 imp_df_trout <- imp_trout$results 
 imp_trout$plot()
 
-#so halodule cover is the most important variable. Let's investigate how it impacts the presence of trout
+#so Thalassia cover is the most important variable. Let's investigate how it impacts the presence of trout
 
+effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
+effect_tt$plot()
+
+#Higher Thalassia, lower presence predicted. What about Halodule?
 effect_hw <- FeatureEffect$new(predictor_trout, feature = c('hw2020'), method = 'pdp')
 effect_hw$plot()
 
 
-#we can see as halodule cover goes up, probability of presence goes up. What about thalassia?
-effect_tt <- FeatureEffect$new(predictor_trout, feature = c('tt2020'), method = 'pdp')
-effect_tt$plot()
+#we can see as halodule cover goes up, probability of presence goes up. Number of species?
+effect_num <- FeatureEffect$new(predictor_trout, feature = c('num2020'), method = 'pdp')
+effect_num$plot()
 
-
-#opposite effect. Makes sense. How about cover?
+#Low and high polynomial. Interesting. High number makes sense as it is often related to Halodule beds. How about cover?
 effect_cov <- FeatureEffect$new(predictor_trout, feature = c('cov2020'), method = 'pdp')
 effect_cov$plot()
 
-#low cover and high cover. Makes sense with low cover as it is often associated with Halodule beds. High cover is more interesting
+#polynomial. Makes sense with low cover as it is often associated with Halodule beds. High cover is more interesting. Sd cover?
+effect_sdcov <- FeatureEffect$new(predictor_trout, feature = c('sdcov2020'), method = 'pdp')
+effect_sdcov$plot()
+
+#Higher is better. More complexity!
 
 #let's now create a spatial representation of presence/absence from the model!
 plot(rastdat)
 
 #need to do it kind of manually because mlr3spatial does not support probability surfaces
-# newdata = as.data.table(values(rastdat)) %>% drop_na() # LG HAD ISSUES WITH THIS
-
-newdata <- as.data.table(as.data.frame(rastdat, na.rm = T))# BETTER TO USE THIS? LG, I don't think u want to drop the NAs as it wont match the raster. Still not working for me, so had to drop but leads to strange predictions
+newdata <- as.data.table(as.data.frame(rastdat)) %>% mutate(tt2020 = ifelse(is.na(tt2020)==T, 0, tt2020)) %>% mutate(hw2020=ifelse(is.na(hw2020)==T, 0, hw2020))
 
 pred = learner$predict_newdata(newdata)
 pred$prob
@@ -515,13 +517,13 @@ table(RSF_ar.train$Transmitter)
 table(RSF_ar.test$Transmitter)
 
 # Fit a GLMM with glmmTMB
-glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + (1 | Transmitter),
+glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + num2020 + sdcov2020 + (1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
 # Should we consider a polynomial?
-cowplot::plot_grid(effect_hw$plot(), effect_tt$plot(), effect_cov$plot(), labels = "auto", ncol = 3)
+cowplot::plot_grid(effect_hw$plot(), effect_tt$plot(), effect_cov$plot(), effect_sdcov$plot(), effect_num$plot(), labels = "auto", ncol = 5)
 
-glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + (1 | Transmitter),
+glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + poly(num2020,2) + sdcov2020 +(1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
 AICc(glmmTMB_model_lin, glmmTMB_model_poly)
@@ -537,6 +539,8 @@ r2(glmmTMB_model)
 effects_hw2020 <- ggpredict(glmmTMB_model, terms = "hw2020 [all]")
 effects_tt2020 <- ggpredict(glmmTMB_model, terms = "tt2020 [all]")
 effects_cov2020 <- ggpredict(glmmTMB_model, terms = "cov2020 [all]")
+effects_sdcov2020 <- ggpredict(glmmTMB_model, terms = "sdcov2020 [all]")
+effects_num2020 <- ggpredict(glmmTMB_model, terms = "num2020 [all]")
 
 # Plot marginal effects for each covariate
 hh_marg <- ggplot(effects_hw2020, aes(x = x, y = predicted)) +
@@ -560,8 +564,22 @@ cov_marg <- ggplot(effects_cov2020, aes(x = x, y = predicted)) +
   labs(x = "Percent SAV Cover", y = "Predicted Probability") +
   theme_minimal()
 
-# Combine the three plots into one using cowplot
-cowplot::plot_grid(hh_marg, tt_marg, cov_marg, labels = "auto", ncol = 3)
+sdcov_marg <- ggplot(effects_sdcov2020, aes(x = x, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Standard Deviation in SAV Cover", y = "Predicted Probability") +
+  theme_minimal()
+
+num_marg <- ggplot(effects_num2020, aes(x = x, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Number of Species", y = "Predicted Probability") +
+  theme_minimal()
+
+# Combine the five plots into one using cowplot
+cowplot::plot_grid(hh_marg, tt_marg, cov_marg, sdcov_marg, num_marg, labels = "auto", ncol = 5)
 
 
 # Accuracy of the model on the training data
@@ -621,7 +639,7 @@ library(mgcv) # For fitting Generalized Additive Mixed Models (GAMMs)
 datgam <- cbind(datextract, alldat) %>% drop_na() %>% mutate(RealDets = as.factor(RealDets), Transmitter = as.factor(Transmitter))
 
 # Fit a GAM model with spatial and temporal autocorrelation (x, y, and Date). Stay tuned for 
-gam_model <- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) +
+gam_model <- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) + s(sdcov2020, k = 4) + s(num2020, k = 4)+
                    s(Transmitter, bs = "re") + # ID
                    s(x, y, bs = "gp"), # Spatial component
                  family = binomial, data = datgam, method = "REML")
@@ -644,7 +662,7 @@ accuracy_gam
 
 # Predict probabilities on spatial grid using GAMs
 # Convert rasters into a data frame and predict onto spatial data
-newdata_gam <- as.data.table(as.data.frame(rastdat)) %>% 
+newdata_gam <- raster::as.data.frame(rastdat, xy=T) %>% 
   mutate(Transmitter = "place-holder")# Use rastdat from earlier
 newdata_gam$predicted_probs_gam <- predict(gam_model, newdata = newdata_gam, type = "response")
 
