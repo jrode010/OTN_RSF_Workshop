@@ -45,9 +45,9 @@ library(mlr3spatial) #spatial machine learning
 library(randomForest) #Machine learning
 library(iml) #result interpretation
 library(ranger) #Machine learning
-library(tidyverse) #organize and visualize data
 library(ggmap) #plotting onto map
 library(beepr) #beeps when code is done running
+library(tidyverse) #organize and visualize data
 
 #Load in data
 setwd('~/Desktop/OTN_RSF_Workshop-main/') #set your working directory
@@ -96,14 +96,14 @@ str(dat)
 
 #Calculation of COAs
 set.seed(19)
-coadat <- dat %>% group_by(DateTime, Transmitter) %>% mutate(n = n()) %>% filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
-  group_by(DateTime, Transmitter) %>% mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
+coadat <- dat %>% group_by(DateTime, Transmitter) %>% dplyr::mutate(n = n()) %>% filter(n >= 5) %>% #Take out any time bin/fish combination with less than 5 detections (COAs will be comprised of at least 5 detections)
+  group_by(DateTime, Transmitter) %>% dplyr::mutate(lat.coa = mean(Latitude), long.coa = mean(Longitude)) %>% #calculate COAs
   dplyr::select(-c(Date_time, Date.and.Time..UTC., Latitude, Longitude, Station.Name, Date_Established)) %>% distinct() #remove uneeded columns and take out repeated columns
 head(coadat)
 
 #So our COA lat and long are in the dataframe. Lets now take out fish with less than 50 COAs
 coadat1 <- coadat %>% as.data.frame() %>% group_by(Transmitter) %>%
-  mutate(count = n()) %>% filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% distinct()
+  dplyr::mutate(count = n()) %>% dplyr::filter(count >= 50) %>% dplyr::select(-c(n, count)) %>% distinct()
 str(coadat1)
 
 #First, let's plot this in ggmap to get our bearings LG
@@ -141,7 +141,8 @@ ggplot() +
   geom_sf(data = sfdat, size = 3)
 
 #this is now projected data, so revert it back!
-coor <- as.data.frame(do.call('rbind', sfdat$geometry)) %>% rename(x = V1, y = V2)
+head(sfdat)
+coor <- as.data.frame(do.call('rbind', sfdat$geometry)) %>% dplyr::rename(x = V1, y = V2)
 
 coadat1 <- cbind(coadat1, coor) %>% dplyr::select(-c(lat.coa, long.coa))
 
