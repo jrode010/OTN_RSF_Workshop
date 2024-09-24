@@ -66,10 +66,10 @@ We choose to go for the polynomial model in the following code because of a lowe
 
 ```{r}
 # Fit a GLMM with glmmTMB
-glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + (1 | Transmitter),
+glmmTMB_model_lin <- glmmTMB(RealDets ~  hw2020 + tt2020 + cov2020 + num2020 + sdcov2020 + (1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
-glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + (1 | Transmitter),
+glmmTMB_model_poly <- glmmTMB(RealDets ~  hw2020 + tt2020 + poly(cov2020,2) + num2020 + sdcov2020 +(1 | Transmitter),
                          data = RSF_ar.train, family = binomial)
 
 AICc(glmmTMB_model_lin, glmmTMB_model_poly)
@@ -114,6 +114,9 @@ Let's get into model interpretation! Similar steps to RF
 # Calculate marginal effects for hw, tt
 effects_hw2020 <- ggpredict(glmmTMB_model, terms = "hw2020 [all]")
 effects_tt2020 <- ggpredict(glmmTMB_model, terms = "tt2020 [all]")
+effects_sdcov2020 <- ggpredict(glmmTMB_model, terms = "sdcov2020 [all]")
+effects_num2020 <- ggpredict(glmmTMB_model, terms = "num2020 [all]")
+
 
 # Plot marginal effects for each covariate
 hh_marg <- ggplot(effects_hw2020, aes(x = x, y = predicted)) +
@@ -130,9 +133,24 @@ tt_marg <- ggplot(effects_tt2020, aes(x = x, y = predicted)) +
   labs(x = "Thalassia testudinum Cover", y = "Predicted Probability") +
   theme_minimal()
 
+sdcov_marg <- ggplot(effects_sdcov2020, aes(x = x, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Standard Deviation in SAV Cover", y = "Predicted Probability") +
+  theme_minimal()
 
-# Combine the three plots into one using cowplot
-cowplot::plot_grid(hh_marg, tt_marg, labels = "auto", ncol = 2)
+num_marg <- ggplot(effects_num2020, aes(x = x, y = predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Number of Species", y = "Predicted Probability") +
+  theme_minimal()
+
+
+# Combine the 4 plots into one using cowplot
+cowplot::plot_grid(hh_marg, tt_marg, sdcov_marg, num_marg, labels = "auto", ncol = 4)
+
 
 #now onto prediction mapping!
 

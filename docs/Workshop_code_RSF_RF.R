@@ -638,7 +638,7 @@ library(mgcv) # For fitting Generalized Additive Mixed Models (GAMMs)
 datgam <- cbind(datextract, alldat) %>% drop_na() %>% mutate(RealDets = as.factor(RealDets), Transmitter = as.factor(Transmitter))
 
 # Fit a GAM model with spatial and temporal autocorrelation (x, y, and Date). Stay tuned for 
-gam_model <- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) +
+gam_model <- gam(RealDets ~ s(hw2020, k = 4) + s(tt2020, k = 4) + s(cov2020, k = 4) + s(sdcov2020, k = 4) + s(num2020, k = 4)+
                    s(Transmitter, bs = "re") + # ID
                    s(x, y, bs = "gp"), # Spatial component
                  family = binomial, data = datgam, method = "REML")
@@ -661,7 +661,7 @@ accuracy_gam
 
 # Predict probabilities on spatial grid using GAMs
 # Convert rasters into a data frame and predict onto spatial data
-newdata_gam <- as.data.table(as.data.frame(rastdat)) %>% 
+newdata_gam <- raster::as.data.frame(rastdat, xy=T) %>% 
   mutate(Transmitter = "place-holder")# Use rastdat from earlier
 newdata_gam$predicted_probs_gam <- predict(gam_model, newdata = newdata_gam, type = "response")
 
