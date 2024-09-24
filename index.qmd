@@ -22,7 +22,7 @@ Resource selection functions (RSFs), defined as a function that produces values 
 
 ## Resources
 
-[Workshop GitHub](https://github.com/jrode010/RSF-OTN-workshop-2024) – Website that houses data and code for our RSF workshop\
+[Workshop GitHub](https://github.com/jrode010/OTN_RSF_Workshop) – Website that houses data and code for our RSF workshop\
 
 [Workshop slides](RSF Workshop OTN 2024_09_23.pdf)
 
